@@ -1,0 +1,407 @@
+---
+title: "Overview"
+output:
+  html_document: default
+  pdf_document: default
+---
+# Caveats
+
+
+_Dataset sourced from Mashvisor via RapidAPI._
+_This project only contains data on listings for properties rented in their entirety. It does not contain listings for individual rooms or shared rooms._
+
+
+```{r setup, include=FALSE}
+###Run Me First
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+setwd("C:/Users/nates/Documents/Projects/AirBnb_Scrape")
+detailed_listings_pre = read.csv("l0_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
+detailed_listings = read.csv("l1_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
+detailed_listings_post = read.csv("l2_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
+df_amenities_pre = read.csv("l0_amenities.csv", stringsAsFactors = TRUE, header = TRUE)
+df_amenities = read.csv("l1_amenities.csv", stringsAsFactors = TRUE, header = TRUE)
+library(dplyr)
+library(ggplot2)
+library(corrplot)
+library(caret)
+library(lubridate)
+library(ISLR)
+library(glmnet)
+library(shiny)
+library(shinydashboard)
+library(naniar)
+detailed_listings$level = 1
+detailed_listings_post$level = 2
+df_comb = rbind(detailed_listings, detailed_listings_post)
+if( "updated_at" %in% colnames(df_comb)){
+  df_comb$created_at = ymd_hms(df_comb$created_at)}
+if( "created_at" %in% colnames(detailed_listings_post)){
+  df_comb$updated_at = ymd_hms(df_comb$created_at)  
+  df_comb = df_comb %>%
+    filter(created_at < "2020-09-06 07:03:27 UTC")
+}
+if( "user_id" %in% colnames(df_comb)){
+  df_comb$user_id = factor(df_comb$user_id)
+  df_comb$user_id = NULL}
+if( "zipcode" %in% colnames(df_comb)){
+  df_comb$zipcode = factor(df_comb$zipcode)}
+if( "neighborhood" %in% colnames(df_comb)){
+  df_comb$neighborhood = factor(df_comb$neighborhood)}
+```
+
+# EDA
+A number of amenities are available in nearly all properties
+```{r frequent_amenities, echo = FALSE}
+totals = colSums(df_amenities_pre)
+totalnames = colnames(df_amenities_pre)
+df_amsums = data_frame(totalnames, totals)
+df_amsums = df_amsums%>% arrange(desc(totals))
+df_amsums%>%filter(totals> quantile(totals, .75) ) %>%
+  ggplot()+
+  geom_bar(aes(x = reorder(totalnames, desc(totals)), y = (totals/nrow(df_amsums))), stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ylab("Percentage of Listings w/ Amenity")+
+  xlab("Amenity")
+
+```
+
+While others were rarely offered, if ever.
+```{r infrequent_amenities, echo = FALSE}
+totals = colSums(df_amenities_pre)
+totalnames = colnames(df_amenities_pre)
+df_amsums = data_frame(totalnames, totals)
+df_amsums = df_amsums%>% arrange(desc(totals))
+df_amsums%>%filter(totals< quantile(totals, .25) ) %>%
+  ggplot()+
+  geom_bar(aes(x = reorder(totalnames, desc(totals)), y = (totals/nrow(df_amsums))), stat = "identity")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ylab("Percentage of Listings w/ Amenity") +
+  xlab("Amenity")
+
+```
+
+In order to improve modeling on non-tree models I dropped amenities with near-zero variance, listed below.
+```{r amdrops, echo = FALSE }
+amdrops_pre = c(colnames(df_amenities_pre)) 
+amdrops = c(colnames(df_amenities))
+amdrops_fin = amdrops_pre[!(amdrops_pre %in% amdrops)]
+amdrops_fin
+```
+
+```{r var_amenity_count, echo=FALSE}
+amnames = c()
+for(ams in 1:length(df_amenities)){
+  if(colnames(df_amenities[ams]) %in% colnames(df_comb) ){
+  amnames =append(amnames, colnames(df_amenities[ams]))}
+}
+df_comb$amenity_count = rowSums(df_comb[amnames])
+```
+
+After variance drops I evaluated the number of amenities offered per listing, below. 
+
+```{r amenity distribution, echo = FALSE}
+
+getmode <- function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+df_comb %>%
+  filter(level == 2)%>%
+  ggplot(aes(x = amenity_count)) +
+  geom_histogram() + 
+  ggtitle("Distribution of Amenities per Listing") +
+  xlab("# of Amenities Offered per Listing")+
+  geom_vline(aes(xintercept=median(amenity_count)),
+            color="blue", linetype="dashed", size=1)+
+  
+   geom_text(aes(x=median(amenity_count), y = 100, label="\nMedian"), color="blue", angle = 270, text=element_text(size=11)) +
+  
+  geom_text(aes(x = getmode(amenity_count), y = 100, label = "\nMode"), color = "red", angle = 270, text=element_text(size=11))+
+  
+  geom_vline(aes(xintercept=getmode(amenity_count)),
+            color="red", linetype="dashed", size=1)
+
+```
+
+
+There seems to be a positive relationship between the number of amenities a listing offers and number of rooms (bathrooms plus bedrooms) per listing or the price of the listing, respectively. 
+
+```{r price_amenity_count, echo = FALSE}
+df_comb %>%
+  filter(level == 2)%>%
+  ggplot(aes(y = price, 
+             x = amenity_count)) +
+  geom_smooth() +
+  geom_point(position = "jitter", size = 0.1, stroke = 0, color = "orange")+
+  ylim(0,1000) +
+  ylab("Rental Income") +
+  xlab("# of Amenities Offered per Listing")+
+  ggtitle("Nightly Price vs # of Amenities per Listing")
+```
+
+
+```{r rooms_amenity_count, echo = FALSE}
+df_comb$rooms = df_comb$bedrooms + df_comb$bathrooms
+df_comb %>%
+  filter(level == 2)%>%
+  ggplot(aes(y = amenity_count, 
+             x = rooms)) +
+  geom_smooth() +
+  geom_point(position = "jitter", color = "orange", size = 0.1, stroke = 0, shape = 16)+
+ # ylim(0,10000) +
+  ylab("# of Amenities per Listing") +
+  xlab("# of Rooms Offered per Listing")+
+  ggtitle("# of Rooms per Listing vs # of Amenities per Listing")+ 
+  xlim(0,9)
+```
+
+However, when related to rental income, the number of amenities seems to be positively related only within specific tolerances. This may suggest that above a certain threshold, more amenities only overwhelm potential travelers, or, below a certain threshold, communicate disinterest on the part of the host.
+
+```{r disp_amenity_count, echo = FALSE}
+df_comb %>%
+  filter(level == 2)%>%
+  ggplot(aes(y = rental_income, 
+             x = amenity_count)) +
+  geom_smooth() +
+  geom_point(position = "jitter", size = 0.1, stroke = 0, color = "orange")+
+  ylim(0,10000) +
+  ylab("Rental Income") +
+  xlab("# of Amenities Offered per Listing")+
+  ggtitle("Monthly Rental Income vs # of Amenities per Listing")
+
+```
+
+# Rooms and Rental Income
+```{r rooms, echo = FALSE}
+
+
+df_comb%>%
+  filter(level == 2)%>%
+      ggplot(aes(y = rental_income, x = rooms)) +
+      geom_point() +
+      geom_smooth() +
+      ylab("Monthly Income per Listing") + 
+      xlab("# of Rooms per Listing")+
+      xlim(0,9)
+
+```
+
+# Neighborhood and Rental Income
+```{r neighborhood, echo = FALSE}
+df_comb %>%
+      group_by(neighborhood)%>%
+      filter(level == 2)%>%
+      filter(n()>10)%>%
+      ggplot(aes(x = reorder(neighborhood,rental_income, median),
+                 y = rental_income)) +
+      geom_boxplot() +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+      ylim(0,10000)
+```
+
+# Multicolinearity
+One issue I dealt with working with this data set was the sheer number of variables, which you can get a sense of from the corrplot below.
+```{r multicolinearity, echo = FALSE}
+library(RColorBrewer)
+cc = df_comb%>%
+               filter(level == 2)%>%
+               select(!level)%>%
+               #select(!amnames)%>%
+               select_if(is.numeric) %>%
+               select_if(~ !any(is.na(.)))%>%
+               #select(c(input$variable)) %>%
+               cor() 
+
+threshold <- 0
+cc0 <- cc
+diag(cc0) <- 0
+ok <- apply(abs(cc0) >= threshold, 1, any)
+cc = cc[ok, ok]
+
+
+               corrplot(cc,
+              #col = c("white", "red"),
+              #bg = "lightblue",
+              #method = "square",
+              order = "hclust",
+              type = "lower",
+             tl.cex = .1,
+             col = brewer.pal(n = 12, name = "RdYlBu")
+              #addrect = 4
+              )
+```
+
+Even when we examine amenities only and drop variables with a near-zero variance, we still have a lot of variables to work with. However, we can begin to get the sense of some clusters of related variables within the dataset.
+```{r ammulticolinearity, echo = FALSE}
+cca = df_amenities%>%
+               #filter(level == 2)%>%
+               #select(!level)%>%
+               #select(amnames)%>%
+               select_if(is.numeric) %>%
+               select_if(~ !any(is.na(.)))%>%
+               #select(c(input$variable)) %>%
+               cor() 
+
+threshold <- 0
+cca0 <- cca
+diag(cca0) <- 0
+ok <- apply(abs(cca0) >= threshold, 1, any)
+cca = cca[ok, ok]
+
+
+               corrplot(cca,
+              #col = c("white", "red"),
+              #bg = "lightblue",
+              #method = "square",
+              order = "hclust",
+              type = "lower",
+             tl.cex = .2,
+             col = brewer.pal(n = 12, name = "RdYlBu")
+              #addrect = 4
+              )
+
+
+```
+
+```{r corr}
+
+
+threshold <- .8
+cc0 <- cc
+diag(cc0) <- 0
+ok <- apply(abs(cc0) >= threshold, 1, any)
+cc = cc[ok, ok]
+cc
+# 
+#  detailed_listings = detailed_listings %>%
+#    select(star_rating, everything())
+#  
+#  nums <- unlist(lapply(detailed_listings, is.numeric)) 
+#  cors = data.frame(cor(detailed_listings[,nums], use = "na.or.complete"))
+#  cors = cors%>%
+#    arrange(star_rating)
+```
+
+# Imputation Graphs
+After cleaning less than 1% of the dataset was null/NA. Missing values were imputed using KNN with euclidean distance used as a metric. Pre- and post-imputation distributions are available below.
+
+```{r missings, echo = FALSE}
+
+
+###Total NA Values
+#missings = data.frame(name = names(colSums(is.na(df_comb %>%filter(level==1)))),
+#                      missing = colSums(is.na(df_comb%>%filter(level==1))))
+#missings = missings %>%
+#  filter(missing>0)%>%
+#  arrange(missing)
+
+#subset <- t(data.frame(missings$missing))
+#barplot(subset, legend = c("missing"), names.arg=missings$name, beside=TRUE)
+
+misses = colSums(is.na(df_comb%>%filter(level==1)))>0
+gg_miss_var(df_comb[misses])
+
+levnams = c("Pre-Imputation", "Post-Imputation")
+
+###Bedrooms
+
+df_comb %>%
+  ggplot(aes(x = bedrooms)) + 
+  geom_histogram() +
+  facet_grid(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation")))+
+  scale_x_continuous(name = "# of Bedrooms", breaks = seq(0,9, 1), limits = c(0,9))
+
+###Cleaning Fee
+df_comb%>%
+  ggplot(aes(x = cleaning_fee_native)) + 
+  geom_histogram() +
+  facet_wrap(~level,labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
+  ggtitle("Distribution of Cleaning Fees")+
+  xlim(0,250)
+
+###Check Out Time
+df_comb %>%
+  ggplot(aes(x = check_out_time)) + 
+  geom_histogram() +
+  facet_wrap(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
+  ggtitle("Distribution of Check Out Times") + 
+  xlab("Check Out Time (24 Hr)") +
+  xlim(0,24)
+
+#df_comb %>%
+#  group_by(level,check_out_time)%>%
+#  summarise(count = n())
+
+###Security Deposits
+df_comb %>%
+  ggplot(aes(x = security_deposit_native)) + 
+  geom_histogram(binwidth = 10) +
+  facet_wrap(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
+  ggtitle("Distribution of Security Deposit Amounts") + 
+  xlab("Some Outliers Eliminated") +
+  xlim(-5,1000)
+
+####Check In Time
+df_comb %>%
+  ggplot(aes(x = check_in_time)) + 
+  facet_grid(~ level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
+  geom_histogram() +
+  ggtitle("Distribution of Check In Time") + 
+  xlab("Check In Time")
+
+#df_comb %>%
+#  group_by(level,X24.hour.check.in) %>%
+#  summarise(missing = sum(is.na(check_in_time))/n() )
+
+
+###Locale
+df_comb %>%
+  ggplot(aes(x = locale)) + 
+  geom_bar(stat = "count") +
+  facet_wrap(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation")))
+
+#df_comb %>%
+#  group_by(level,locale)%>%
+#  summarise(count = n())
+
+###Last Update
+if( "updated_at" %in% colnames(df_comb)){
+df_comb %>%
+  ggplot(aes(x = updated_at)) + 
+  geom_freqpoly(stat = "count") +
+  facet_wrap(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
+  ggtitle("Time of Last Update") + 
+  xlab("All Dates 2020")}
+
+```
+
+
+```{r dummy_x_split, echo = FALSE}
+
+
+###########
+##Dummies##
+###########
+df_imp = df_comb %>%
+  select(rental_income, everything()) %>% filter(level ==2)
+df_imp = df_imp[complete.cases(df_imp),]
+x <- model.matrix(rental_income ~.,
+                     data = df_imp)[,-1]
+
+y = df_imp$rental_income
+set.seed(0)
+train = sample(1:nrow(x), 7*nrow(x)/10)
+test = (-train)
+y.test = y[test]
+grid = 10^seq(5, -2, length = 100)
+```
+
+```{r dummy_x_split, echo = FALSE}
+#https://bradleyboehmke.github.io/HOML/regularized-regression.html
+library(plotmo)
+library(vip)
+ #Fitting the lasso regression. Alpha = 1 for lasso regression.
+lasso.models = glmnet(x,y, alpha = 1, lambda = grid)
+plot_glmnet(lasso.models, label = 20)
+vip(lasso.models, num_features = 20, geom = "point")
+```
