@@ -4,17 +4,20 @@ ui <- fluidPage(
   titlePanel(title = "Amenity-Shmemenity"),
   
   sidebarLayout(
-    sidebarPanel("by Nathan Schweizer"),
+    sidebarPanel("by Nathan Schweizer",
     
-    sidebarMenu(
-      menuItem("Market Overview", 
-               tabName = "Market Overview", 
-               icon = icon("Market Overview")),
+    
+      selectizeInput(inputId = "amenity",
+                     label = "Amenity",
+                     choices = unique(amnames)),
+      #menuItem("Market Overview", 
+      #         tabName = "Market Overview", 
+      #         icon = icon("Market Overview")),
       
-      menuItem("data", 
-               tabName = "data", 
-               icon = icon("data"))
-    )),
+     # menuItem("data", 
+      #         tabName = "data", 
+      #         icon = icon("data"))
+    ),
     
     mainPanel(
       tabsetPanel (
@@ -24,6 +27,11 @@ ui <- fluidPage(
                 fluidRow(
                   plotOutput("room"))
         ),
+        tabPanel("Amenities",
+                 fluidRow(
+                   plotOutput("room_dist"),
+                   plotOutput("am_dist")
+                 )),
         tabPanel("data",
                 fluidRow(
                   plotOutput("corr"),
@@ -48,4 +56,5 @@ ui <- fluidPage(
       ))
     
   )
+)
 
