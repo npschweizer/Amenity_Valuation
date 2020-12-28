@@ -66,14 +66,14 @@ if( "neighborhood" %in% colnames(df_comb)){
 #   ggplot(aes(x = reorder(zipcode), rental_income))+
 #   geom_boxplot()
 # 
-# df_comb %>%
-#   filter(level == 2)%>%
-#   ggplot(aes(x = fh_weekend_price, 
-#              y = rental_income,
-#              color = monthly_price_factor))+
-#   geom_point()+
-#   ylim(0,10000)+
-#   xlim(0,1000)
+ df_comb %>%
+   filter(level == 2)%>%
+   ggplot(aes(x = fh_weekend_price, 
+              y = rental_income,
+              color = monthly_price_factor))+
+   geom_point()+
+   ylim(0,10000)+
+   xlim(0,1000)
  
 # #######################
 # ##Feature Engineering##
@@ -127,7 +127,7 @@ df_comb$fh_weekend_price = df_comb$listing_weekend_price_native + df_comb$price_
 # plot(model.count)
 # summary(model.count)
 # 
-# ###Limited Linear Model
+ ###Limited Linear Model
 # df_lm = filter(df_comb, level ==2)
 # df_lm = df_lm[-c(1471,1478, 1476, 178)]
 # model.limited = lm(rental_income ~ rooms +
@@ -145,27 +145,27 @@ df_comb$fh_weekend_price = df_comb$listing_weekend_price_native + df_comb$price_
 # summary(model.limited)
 # plot(model.limited)
 # 
-# ###Engineering Location Variable
-# library(class)
-# library(caret)
-# df_loc = data.frame(filter(df_comb, level == 2)$neighborhood)
-# df_loc$city = filter(df_comb, level == 2)$city
-# df_loc$zipcode = as.factor( filter(df_comb, level == 2)$zipcode)
-# df_loc$lat = filter(df_comb, level == 2)$lat
-# df_loc$lng = filter(df_comb, level == 2)$lng
-# df_loc$rooms = filter(df_comb, level == 2)$rooms
-# colnames(df_loc) = c("neighborhood", "city", "zipcode", "rooms")
-# 
-# 
-# dummies <- dummyVars(rooms~., data = df_loc)
-# df_loc = predict(dummies, newdata = df_loc)
-# 
-# set.seed(0)
-# cl = factor(as.integer(runif(nrow(df_loc), 1,10)))
-# knn3Train(train = df_loc[train,], df_loc[test,], cl = cl[train], k = 500, prob = TRUE)
-# df_loc$probs = attributes(knn.loc)[[3]]
-# max = max(df_loc$probs)
-# nrow(subset(df_loc,probs != max))
+ ###Engineering Location Variable
+library(class)
+library(caret)
+df_loc = data.frame(filter(df_comb, level == 2)$neighborhood)
+df_loc$city = filter(df_comb, level == 2)$city
+df_loc$zipcode = as.factor( filter(df_comb, level == 2)$zipcode)
+#df_loc$lat = filter(df_comb, level == 2)$lat
+#df_loc$lng = filter(df_comb, level == 2)$lng
+df_loc$rooms = filter(df_comb, level == 2)$rooms
+colnames(df_loc) = c("neighborhood", "city", "zipcode", "rooms")
+ 
+
+dummies <- dummyVars(rooms~., data = df_loc)
+df_loc = predict(dummies, newdata = df_loc)
+
+set.seed(0)
+cl = factor(as.integer(runif(nrow(df_loc), 1,10)))
+knn.loc = knn3Train(train = df_loc[train,], df_loc[test,], cl = cl[train], k = 500, prob = TRUE)
+df_loc$probs = attributes(knn.loc)[[3]]
+max = max(df_loc$probs)
+nrow(subset(df_loc,probs != max))
 # 
 # 
 
@@ -173,21 +173,16 @@ df_comb$fh_weekend_price = df_comb$listing_weekend_price_native + df_comb$price_
 # ##Feature Selection##
 # #####################
 
-# summary(lasso.models)
-# #Visualizing the lasso regression shrinkage.
-# plot(lasso.models , xvar = "lambda", label = TRUE, main = "Lasso Regression")
+ summary(lasso.models)
+ #Visualizing the lasso regression shrinkage.
+ plot(lasso.models , xvar = "lambda", label = TRUE, main = "Lasso Regression")
 
-# plot(cv.lasso.out, label = 20)
-# vip(cv.lasso.out, num_features = 15, geom = "point")
-# #Running 10-fold cross validation.
-# set.seed(0)
-# cv.lasso.out = cv.glmnet(x[train, ], y[train],lambda = grid, alpha = 1, nfolds = 10)
-# plot(cv.lasso.out, main = "Lasso Regression\n")
-# bestlambda.lasso = cv.lasso.out$lambda.min
-# lasso.bestlambdatrain = predict(lasso.models, s = bestlambda.lasso, newx = x[test, ])
-# mean((lasso.bestlambdatrain - y.test)^2)
-# 
-# 
+ plot(cv.lasso.out, label = 20)
+ vip(cv.lasso.out, num_features = 15, geom = "point")
+ #Running 10-fold cross validation.
+ 
+
+
 # ###Recursive Feature elimination
 # 
 # ctrl =  rfeControl(functions = lmFuncs,
@@ -214,3 +209,13 @@ df_comb$fh_weekend_price = df_comb$listing_weekend_price_native + df_comb$price_
 # varImpPlot(rf.listing)
 # df_tree_imp = data.frame(importance(rf.listing))
 # df_tree_imp = df_tree_imp %>%arrange(desc(X.IncMSE))
+
+detailed_listings%>%
+ ggplot(aes(x = as.factor(zipcode) )) +
+ geom_bar(stat = "count")
+ 
+ detailed_listings %>%
+   filter(level == 2)%>%
+   group_by(as.factor(neighborhood))%>%
+   summarise(count = n())
+   

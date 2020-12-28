@@ -41,24 +41,13 @@ detailed_listings %>%
 
 #Ammenity Slides
 
-detailed_listings%>%
-  filter(Bread.maker == 1)%>%
-  ggplot(aes(x = bedrooms)) +
-  geom_histogram() +
-  ggtitle("Number of Listings with Ammenity") +
-  scale_x_discrete(name ="Bedrooms", 
-                                    limits=c("0", "1", "2", "3", "4",
-                                             "5", "6", "7", "8", "9"))
 
-detailed_listings%>%
-  group_by(neighborhood)%>%
-  summarise(count = sum(Bread.maker), prop = (sum(X24.hour.check.in)/n())) %>%
-  filter(prop != 0)%>%
-  ggplot(aes(x = reorder(neighborhood,-prop), y = prop)) +
-  geom_bar(stat = "identity")+
-  ggtitle("Proportion of Properties w/ Ammenity")+
-  xlab("Neighborhood")+ 
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+detailed_listings %>%
+  ggplot(aes(x = bedrooms))+
+  geom_histogram()
+
+
+
 
 dtb = detailed_listings %>%
   group_by(bedrooms, X24.hour.check.in)%>%
@@ -72,7 +61,7 @@ dtb %>% ggplot(aes(y = income, x = bedrooms, fill = X24.hour.check.in)) +
   ggtitle("Monthly Income for Properties With or Without Ammenity")
 
 dtn = detailed_listings %>%
-  group_by(neighborhood, Outlet.covers)%>%
+  group_by(neighborhood, Outlet.covers )%>%
   summarise(income=mean(rental_income), count= n())%>%
   group_by(neighborhood) %>%
   mutate(tcount = sum(count))
@@ -81,9 +70,9 @@ dtn$Outlet.covers = as.factor(dtn$Outlet.covers)
 
 fval = 20
 dtn %>% filter(tcount>=20)%>%
-  ggplot(aes(y = income, x = neighborhood, fill = outlet.covers)) + 
+  ggplot(aes(y = income, x = neighborhood, fill = Outlet.covers )) + 
   geom_bar(stat = "identity", position = position_dodge()) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
-    labs(title = "Average Rental Income By Neighborhood",
-         caption = paste(c("Excludes Neighborhoods with Less than 20 Listings"))
+    labs(title = "Average Rental Income By Neighborhood", 
+         caption = paste(c("Excludes Neighborhoods with Less than 20 Listings")))
 
