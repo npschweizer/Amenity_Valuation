@@ -32,190 +32,235 @@ if( "zipcode" %in% colnames(df_comb)){
 if( "neighborhood" %in% colnames(df_comb)){
   df_comb$neighborhood = factor(df_comb$neighborhood)}
 
-
-
-# 
-# ###Exploring Rooms, Capacity, and Income
-# detailed_listings %>%
-#   group_by(neighborhood)%>%
-#   summarise(Mean_Revenue = mean(rental_income))%>%
-#   arrange(Mean_Revenue)
-# 
-# detailed_listings%>%
-#   ggplot(aes(y = rental_income, x = person_capacity)) +
-#   geom_point(position = "jitter") +
-#   geom_smooth()
-# 
-# detailed_listings%>%
-#   ggplot(aes(x = price))+
-#   geom_histogram() +
-#   xlim(0,250)
-# 
-# detailed_listings %>%
-#   ggplot(aes(y = rental_income, x = bedrooms)) +
-#   geom_point(position = "jitter") +
-#   geom_smooth() +
-#   xlim(0,5)
-# 
-# detailed_listings%>%
-#   ggplot(aes(x = weekly_price_factor))+
-#   geom_histogram()
-# 
-# df_comb %>%
-#   filter(level ==2)%>%
-#   ggplot(aes(x = reorder(zipcode), rental_income))+
-#   geom_boxplot()
-# 
- df_comb %>%
-   filter(level == 2)%>%
-   ggplot(aes(x = fh_weekend_price, 
-              y = rental_income,
-              color = monthly_price_factor))+
-   geom_point()+
-   ylim(0,10000)+
-   xlim(0,1000)
- 
 # #######################
 # ##Feature Engineering##
 # #######################
 # 
 df_comb$fh_weekend_price = df_comb$listing_weekend_price_native + df_comb$price_for_extra_person_native * (df_comb$person_capacity - df_comb$guests_included)
-# 
-# detailed_listings%>%
-#   ggplot(aes(x = fh_weekend_price, y = rental_income)) +
-#   geom_point() + geom_smooth()
-# 
-# detailed_listings%>%
-#   ggplot(aes(x = fh_weekend_price))+
-#   geom_histogram()
-# model.fh = lm(rental_income ~ fh_weekend_price
-#                    ,
-#                    data = detailed_listings
-# )
-# summary(model.fh)
-# boxCox(model.fh)
-# 
-# ###Creating feature ammenity_count to represent the number of ammenities in each listing
+
+###Creating feature ammenity_count to represent the number of ammenities in each listing
  amnames = c()
  for(ams in 1:length(df_amenities)){
    if(colnames(df_amenities[ams]) %in% colnames(df_comb) ){
    amnames =append(amnames, colnames(df_amenities[ams]))}
  }
  df_comb$amenity_count = rowSums(df_comb[amnames])
-# ###Creating feature rooms to represent the number of bedrooms and bathrooms in each listing
-# 
- df_comb$rooms = df_comb$bedrooms + df_comb$bathrooms
-# 
-# ###Creating feature avg price to represent the expected price
-# ###of a randomly selected night
-# 
- df_comb$avg_price = df_comb$price * 5 + df_comb$listing_weekend_price_native
-# 
-# 
-# 
-# 
-# # + 
-# # xlim(0,5000)
-# 
-# detailed_listings %>%
-#   ggplot(aes(x= ammenity_count)) +
-#   geom_histogram()
-# 
-# detailed_listings$rental_income
-# model.count = lm(rental_income ~ ammenity_count,
-#                  data = detailed_listings)
-# plot(model.count)
-# summary(model.count)
-# 
+###Creating feature rooms to represent the number of bedrooms and bathrooms in each listing
+ 
+df_comb$rooms = df_comb$bedrooms + df_comb$bathrooms
+
+###Creating feature avg price to represent the expected price
+###of a randomly selected night
+ 
+df_comb$avg_price = (df_comb$price * 5 + df_comb$listing_weekend_price_native * 2)/7
+
+###Creating accesibility score
+df_access = df_amenities[c(2,3, 42, 54, 61, 62, 75, 107, 134, 161, 162, 163, 164, 165, 166, 167)]
+
+df_access$AccessibilityScore = rowSums(df_access)
+
+df_access%>%
+  ggplot(aes(x = as.factor(AccessibilityScore))) +
+  geom_histogram(stat = "count")
+colSums(df_access)
+
+###Bathroom Score
+
+df_essential = df_amenities[c(13,17,19,51,154,170)]
+colSums((df_essential))
+###creating Child-Friendly Score
+df_child = df_amenities[c(7,8,9,32,33,39,55,80,112,114,152,31,58,122,15)]
+df_child$ChildScore = rowSums(df_child)
+df_child%>%
+  ggplot(aes(x = as.factor(ChildScore))) +
+  geom_histogram(stat = "count")
+colSums(df_child)
+
+###creating Common Amenities df
+df_common = df_amenities[c(138, 139, 36, 53, 73, 76, 87, 128, 129, 96, 4, 79, 125, 29,
+                           95,83,52,123,93,94,151,25,131,147,85
+                           )]
+colSums(df_common)
+
+###creating Kitchen Amenities df
+df_kitchen = df_amenities[c(101,38, 35, 105, 126, 89, 132, 102, 66, 44, 156, 43, 149, 113, 20,
+                            133, 10, 12)]
+
+colSums(df_kitchen)
+
+###creating Facilities Amenities df
+
+df_facilities = df_amenities[c(64, 65, 115, 116, 47, 71, 124, 82, 140)]
+
+###creating Outdoor df
+df_outdoor=df_amenities[c(6,117,69)]
+
+###creating Special Amenities df
+df_logistics = df_amenities[c(34,98,99)]
+summary(df_logistics)
+
+###creating 
  ###Limited Linear Model
 # df_lm = filter(df_comb, level ==2)
-# df_lm = df_lm[-c(1471,1478, 1476, 178)]
-# model.limited = lm(rental_income ~ rooms +
+# df_lm$AccessibilityScore = df_access$AccessibilityScore
+# df_lm$ChildScre = df_child$ChildScore
+#  model.limited = lm(rental_income ~ rooms +
 #                      fh_weekend_price+
 #                      occupancy +
-#                      guests_included+ 
-#                      #ammenity_count + 
-#                      #weekly_price_factor+
-#                      #Outlet.covers + 
-#                      cleaning_fee_native +
-#                      neighborhood
-#                      ,
+#                      guests_included+
+#                      AccessibilityScore+
+#                      cleaning_fee_native,
 #                    data = df_lm[train,]
 #                      )
+                
+#some outliers 1471,1478, 1476, 178
+
 # summary(model.limited)
 # plot(model.limited)
 # 
  ###Engineering Location Variable
-library(class)
-library(caret)
-df_loc = data.frame(filter(df_comb, level == 2)$neighborhood)
-df_loc$city = filter(df_comb, level == 2)$city
-df_loc$zipcode = as.factor( filter(df_comb, level == 2)$zipcode)
-#df_loc$lat = filter(df_comb, level == 2)$lat
-#df_loc$lng = filter(df_comb, level == 2)$lng
-df_loc$rooms = filter(df_comb, level == 2)$rooms
-colnames(df_loc) = c("neighborhood", "city", "zipcode", "rooms")
- 
-
-dummies <- dummyVars(rooms~., data = df_loc)
-df_loc = predict(dummies, newdata = df_loc)
-
-set.seed(0)
-cl = factor(as.integer(runif(nrow(df_loc), 1,10)))
-knn.loc = knn3Train(train = df_loc[train,], df_loc[test,], cl = cl[train], k = 500, prob = TRUE)
-df_loc$probs = attributes(knn.loc)[[3]]
-max = max(df_loc$probs)
-nrow(subset(df_loc,probs != max))
-# 
-# 
-
-# #####################
-# ##Feature Selection##
-# #####################
-
- summary(lasso.models)
- #Visualizing the lasso regression shrinkage.
- plot(lasso.models , xvar = "lambda", label = TRUE, main = "Lasso Regression")
-
- plot(cv.lasso.out, label = 20)
- vip(cv.lasso.out, num_features = 15, geom = "point")
- #Running 10-fold cross validation.
- 
-
-
-# ###Recursive Feature elimination
-# 
-# ctrl =  rfeControl(functions = lmFuncs,
-#                  method = "repeatedcv",
-#                  repeats = 5,
-#                  verbose = FALSE)
-# subsets <- c(1:5, 10, 15, 25)
-# 
-# rfe(x = x, y = y,
-#     sizes = 5,
-#     rfeControl = ctrl)
-# options(error=recover)
-# 
-# ###Random Forest
-# library(randomForest)
-# 
-# #Fitting an initial random forest to the training subset.
+# library(class)
+# library(caret)
+# df_loc = data.frame(filter(df_comb, level == 2)$neighborhood)
+# df_loc$city = filter(df_comb, level == 2)$city
+# df_loc$zipcode = as.factor( filter(df_comb, level == 2)$zipcode)
+# df_loc$lat = filter(df_comb, level == 2)$lat
+# df_loc$lng = filter(df_comb, level == 2)$lng
+# df_loc$rooms = filter(df_comb, level == 2)$rooms
+# colnames(df_loc) = c("neighborhood", "city", "zipcode", "rooms")
+#
+#
+# dummies <- dummyVars(rooms~., data = df_loc)
+# df_loc = predict(dummies, newdata = df_loc)
+#
 # set.seed(0)
-# rf.listing = randomForest( x, y, importance = TRUE)
-# rf.listing
-# 
-# #Can visualize a variable importance plot.
-# importance(rf.listing)
-# varImpPlot(rf.listing)
-# df_tree_imp = data.frame(importance(rf.listing))
-# df_tree_imp = df_tree_imp %>%arrange(desc(X.IncMSE))
+# cl = factor(as.integer(runif(nrow(df_loc), 1,10)))
+# knn.loc = knn3Train(train = df_loc[train,], df_loc[test,], cl = cl[train], k = 500, prob = TRUE)
+# df_loc$probs = attributes(knn.loc)[[3]]
+# max = max(df_loc$probs)
+# nrow(subset(df_loc,probs != max))
 
-detailed_listings%>%
- ggplot(aes(x = as.factor(zipcode) )) +
- geom_bar(stat = "count")
+#####################
+##Feature Selection##
+#####################
+ library(proxy)
+ library(caret)
+   df_imp = df_comb %>%
+      select(rental_income, everything()) %>% filter(level ==2)#%>%
+      #filter(neighborhood == "Center City" )
+   df_imp = df_imp[complete.cases(df_imp),]
+   X <- model.matrix(rental_income ~.,
+                     data = df_imp)[,-1]
+
+ y = df_imp$rental_income
+
+
+ set.seed(0)
+ train = sample(1:nrow(df_imp), 9*nrow(df_imp)/10)
+ test = (-train)
+ y.test = y[test]
+ X.train = X[train,]
+ X.test = X[test,]
+
+ DisSamp = maxDissim(a = X.test, b = X.train, n = nrow(X)/10)
+
+ grid = 10^seq(5, -2, length = 100)
+
+ #https://bradleyboehmke.github.io/HOML/regularized-regression.html
+ library(plotmo)
+ library(vip)
+ #Fitting the lasso regression. Alpha = 1 for lasso regression.
+ lasso.models = glmnet(X,y, alpha = 1, lambda = grid)
+ plot_glmnet(lasso.models, label = 10)
+ vip(lasso.models, num_features = 30, geom = "point")
+ set.seed(0)
+ cv.lasso.out = cv.glmnet(X[train, ], y[train],type.measure = "mae",
+                          lambda = grid, alpha = 1, nfolds = 10)
+ plot(cv.lasso.out, main = "Lasso Regression\n")
+ bestlambda.lasso = cv.lasso.out$lambda.min
+ lasso.bestlambdatrain = predict(lasso.models, s = bestlambda.lasso, newx = X[test, ])
+ mean(abs(lasso.bestlambdatrain-y.test))
+
+  #Visualizing the lasso regression shrinkage.
+  plot(lasso.models , xvar = "lambda", label = TRUE, main = "Lasso Regression")
+
+  plot(cv.lasso.out, label = 20)
+  vip(cv.lasso.out, num_features = 15, geom = "point")
+  #Running 10-fold cross validation.
+
+ ###Recursive Feature elimination
+
+ ctrl =  rfeControl(functions = lmFuncs,
+                  method = "repeatedcv",
+                  repeats = 5,
+                  verbose = FALSE)
+ subsets <- c(1:5, 10, 15, 25)
+
+ rfe(x = x, y = y,
+     sizes = 5,
+     rfeControl = ctrl)
+ options(error=recover)
+
+###Random Forest
+  library(randomForest)
  
- detailed_listings %>%
-   filter(level == 2)%>%
-   group_by(as.factor(neighborhood))%>%
-   summarise(count = n())
-   
+  #Fitting an initial random forest to the training subset.
+  set.seed(0)
+  rf.listing = randomForest( X[train,] , y[train], importance = TRUE)
+  rf.listing
+  yhat = predict(rf.listing, newdata = X[test, ])
+  plot(yhat, y.test)
+  abline(0, 1)
+  mean((yhat - y.test)^2)
+  mean(abs(yhat-y.test))
+  #Can visualize a variable importance plot.
+  importance(rf.listing)
+  varImpPlot(rf.listing)
+  df_tree_imp = data.frame(importance(rf.listing))
+  df_tree_imp = df_tree_imp %>%arrange(desc(X.IncMSE))
+ 
+  library(gbm)
+ 
+  set.seed(0)
+  boost.listing = gbm(rental_income~.,data = df_imp[train,],
+                     distribution = "gaussian",
+                     n.trees = 10000,
+                     interaction.depth = 4,
+                     shrinkage = .1)
+  n.trees = seq(from = 100, to = 10000, by = 100)
+  predmat = predict(boost.boston, newdata = df_imp[-train, ], n.trees = n.trees)
+  #Inspecting the relative influence.
+  par(mfrow = c(1, 1))
+  summary(boost.boston)
+ 
+  par(mfrow = c(1, 1))
+  berr = with(df_imp[-train, ], apply(abs((predmat - rental_income)), 2, mean))
+  plot(n.trees, berr, pch = 16,
+       ylab = "Mean Absolute Error",
+       xlab = "# Trees",
+       main = "Boosting Test Error")
+  
+###Support Vector Machine   
+  library(e1071)
+  
+  #Fitting a maximal margin classifier to the training data.
+  svm.mmc.linear = svm(rental_income~., #Familiar model fitting notation.
+                       data = df_imp, #Using the linearly separable data.
+                       subset = train, #Using the training data.
+                       kernel = "radial", #Using a linear kernel.
+                       cost = 1e6,#A very large cost; default is 1.
+                       type = "eps",
+                       scale = FALSE) 
+  yhat.svm.mmc.linear = predict(svm.mmc.linear, newdata = df_imp[test, ])
+  summary(svm.mmc.linear)
+  mean(abs(yhat.svm.mmc.linear - df_imp$rental_income[test]))
+  
+  cv.svm = tune(svm,
+                            rental_income ~ .,
+                            data = df_imp[train, ],
+                            kernel = "radial",
+                            ranges = list(cost = 10^(seq(-5, .5, length = 100))))
+  
+  best.model = cv.svm$best.model
+  yhat.svm.best = predict(best.model, newdata = df_imp[test, ])
+  mean(abs(yhat.svm.best - df_imp$rental_income[test]))
