@@ -1,9 +1,9 @@
 ###Run Me First
-setwd("C:/Users/nates/Documents/Projects/AirBnb_Scrape")
-detailed_listings_pre = read.csv("l0_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
-detailed_listings = read.csv("l1_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
-detailed_listings_post = read.csv("l2_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
-df_amenities = read.csv("amenities.csv", stringsAsFactors = TRUE, header = TRUE)
+setwd("C:/Users/nates/Documents/Projects/Ammenity_Valuation")
+detailed_listings_pre = read.csv("l0_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE, fileEncoding = 'UTF-8-BOM')
+detailed_listings = read.csv("l1_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE, fileEncoding = 'UTF-8-BOM')
+detailed_listings_post = read.csv("l2_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE, fileEncoding = 'UTF-8-BOM')
+df_amenities = read.csv("amenities.csv", stringsAsFactors = TRUE, header = TRUE,fileEncoding = 'UTF-8-BOM')
 library(dplyr)
 library(ggplot2)
 library(corrplot)
@@ -32,10 +32,10 @@ if( "zipcode" %in% colnames(df_comb)){
 if( "neighborhood" %in% colnames(df_comb)){
   df_comb$neighborhood = factor(df_comb$neighborhood)}
 
-# #######################
-# ##Feature Engineering##
-# #######################
-# 
+#######################
+##Feature Engineering##
+#######################
+ 
 df_comb$fh_weekend_price = df_comb$listing_weekend_price_native + df_comb$price_for_extra_person_native * (df_comb$person_capacity - df_comb$guests_included)
 
 ###Creating feature ammenity_count to represent the number of ammenities in each listing
@@ -97,7 +97,7 @@ df_outdoor=df_amenities[c(6,117,69)]
 
 ###creating Special Amenities df
 df_logistics = df_amenities[c(34,98,99)]
-summary(df_logistics)
+
 
 ###creating 
  ###Limited Linear Model
@@ -141,126 +141,283 @@ summary(df_logistics)
 # nrow(subset(df_loc,probs != max))
 
 #####################
-##Feature Selection##
+##Split and Dummify##
 #####################
- library(proxy)
- library(caret)
-   df_imp = df_comb %>%
-      select(rental_income, everything()) %>% filter(level ==2)#%>%
-      #filter(neighborhood == "Center City" )
-   df_imp = df_imp[complete.cases(df_imp),]
-   X <- model.matrix(rental_income ~.,
-                     data = df_imp)[,-1]
-
- y = df_imp$rental_income
-
-
- set.seed(0)
- train = sample(1:nrow(df_imp), 9*nrow(df_imp)/10)
- test = (-train)
- y.test = y[test]
- X.train = X[train,]
- X.test = X[test,]
-
- DisSamp = maxDissim(a = X.test, b = X.train, n = nrow(X)/10)
-
+  library(proxy)
+  library(caret)
+    df_imp = df_comb %>%
+       select(rental_income, everything()) %>% filter(level ==2)#%>%
+       #filter(neighborhood == "Gayborhood" )
+    df_imp = df_imp[complete.cases(df_imp),]
+    df_imp$level = NULL
+    X <- model.matrix(rental_income ~.,
+                      data = df_imp)[,-1]
+   
+   y = df_imp$rental_income
+   mat_dum = cbind(X,y)
+   maxs <- apply(mat_dum, 2, max)  
+   mins <- apply(mat_dum, 2, min)
+   mat_dum_sca = scale(mat_dum,  
+                 center = mins, 
+                 scale = maxs - mins)
+  set.seed(0)
+  train = sample(1:nrow(df_imp), 8*nrow(df_imp)/10)
+  test = (-train)
+  y.test = y[test]
+  X.train = X[train,]
+  X.test = X[test,]
+ 
+#  #DisSamp = maxDissim(a = X.test, b = X.train, n = nrow(X)/10)
+# 
+#  
+##########
+##Models##
+##########
+  
+#Running ElasticNet 10-fold cross validation.
+ rsq <- function(x, y) summary(lm(y~x))$r.squared
  grid = 10^seq(5, -2, length = 100)
-
- #https://bradleyboehmke.github.io/HOML/regularized-regression.html
- library(plotmo)
- library(vip)
- #Fitting the lasso regression. Alpha = 1 for lasso regression.
- lasso.models = glmnet(X,y, alpha = 1, lambda = grid)
- plot_glmnet(lasso.models, label = 10)
- vip(lasso.models, num_features = 30, geom = "point")
+ agrid = seq(from = 0,
+             to = 1,
+             by = .1) 
  set.seed(0)
+ lasso.models = glmnet(X[train, ],y[train], alpha = 1, lambda = grid)
  cv.lasso.out = cv.glmnet(X[train, ], y[train],type.measure = "mae",
-                          lambda = grid, alpha = 1, nfolds = 10)
+                         lambda = grid, alpha = 1, nfolds = 10)
  plot(cv.lasso.out, main = "Lasso Regression\n")
  bestlambda.lasso = cv.lasso.out$lambda.min
  lasso.bestlambdatrain = predict(lasso.models, s = bestlambda.lasso, newx = X[test, ])
  mean(abs(lasso.bestlambdatrain-y.test))
-
-  #Visualizing the lasso regression shrinkage.
-  plot(lasso.models , xvar = "lambda", label = TRUE, main = "Lasso Regression")
-
-  plot(cv.lasso.out, label = 20)
-  vip(cv.lasso.out, num_features = 15, geom = "point")
-  #Running 10-fold cross validation.
-
- ###Recursive Feature elimination
-
- ctrl =  rfeControl(functions = lmFuncs,
-                  method = "repeatedcv",
-                  repeats = 5,
-                  verbose = FALSE)
- subsets <- c(1:5, 10, 15, 25)
-
- rfe(x = x, y = y,
-     sizes = 5,
-     rfeControl = ctrl)
- options(error=recover)
-
-###Random Forest
-  library(randomForest)
  
+ set.seed(0)
+ ridge.models = glmnet(X[train, ],y[train], alpha = 0, lambda = grid)
+ cv.ridge.out = cv.glmnet(X[train, ], y[train],type.measure = "mae",
+                          lambda = grid, alpha = 0, nfolds = 10)
+ plot(cv.lasso.out, main = "Ridge Regression\n")
+ bestlambda.ridge = cv.ridge.out$lambda.min
+ ridge.bestlambdatrain = predict(ridge.models, s = bestlambda.ridge, newx = X[test, ])
+ mean(abs(ridge.bestlambdatrain-y.test))
+ 
+#  ###Recursive Feature elimination
+# # 
+# #  ctrl =  rfeControl(functions = lmFuncs,
+# #                   method = "repeatedcv",
+# #                   repeats = 5,
+# #                   verbose = FALSE)
+# #  subsets <- c(1:5, 10, 15, 25)
+# # 
+# #  rfe(x = x, y = y,
+# #      sizes = 5,
+# #      rfeControl = ctrl)
+# #  options(error=recover)
+# 
+ ###Random Forest
+  library(randomForest)
+  
   #Fitting an initial random forest to the training subset.
   set.seed(0)
-  rf.listing = randomForest( X[train,] , y[train], importance = TRUE)
-  rf.listing
-  yhat = predict(rf.listing, newdata = X[test, ])
-  plot(yhat, y.test)
-  abline(0, 1)
-  mean((yhat - y.test)^2)
-  mean(abs(yhat-y.test))
-  #Can visualize a variable importance plot.
-  importance(rf.listing)
-  varImpPlot(rf.listing)
-  df_tree_imp = data.frame(importance(rf.listing))
-  df_tree_imp = df_tree_imp %>%arrange(desc(X.IncMSE))
- 
-  library(gbm)
- 
+  rf.listing500 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 500                           )
+  rf.yhat500 = predict(rf.listing500, newdata = X[test, ])
+  plot(rf.yhat500, y.test)
+  rf.mae500 = mean(abs(rf.yhat500-y.test)) 
+  
   set.seed(0)
-  boost.listing = gbm(rental_income~.,data = df_imp[train,],
-                     distribution = "gaussian",
-                     n.trees = 10000,
-                     interaction.depth = 4,
-                     shrinkage = .1)
-  n.trees = seq(from = 100, to = 10000, by = 100)
-  predmat = predict(boost.boston, newdata = df_imp[-train, ], n.trees = n.trees)
-  #Inspecting the relative influence.
-  par(mfrow = c(1, 1))
-  summary(boost.boston)
- 
-  par(mfrow = c(1, 1))
-  berr = with(df_imp[-train, ], apply(abs((predmat - rental_income)), 2, mean))
-  plot(n.trees, berr, pch = 16,
-       ylab = "Mean Absolute Error",
-       xlab = "# Trees",
-       main = "Boosting Test Error")
+  rf.listing1000 = randomForest( X[train,] , y[train], importance = TRUE,ntree = 1000                           )
+  rf.yhat1000 = predict(rf.listing1000, newdata = X[test, ])
+  plot(rf.yhat1000, y.test)
+  rf.mae1000 = mean(abs(rf.yhat1000-y.test))
   
-###Support Vector Machine   
-  library(e1071)
+  set.seed(0)
+  rf.listing2500 = randomForest( X[train,] , y[train], importance = TRUE  , ntree = 2500                         )
+  rf.yhat2500 = predict(rf.listing2500, newdata = X[test, ])
+  plot(rf.yhat2500, y.test)
+  rf.mae2500 =  mean(abs(rf.yhat2500-y.test))
   
-  #Fitting a maximal margin classifier to the training data.
-  svm.mmc.linear = svm(rental_income~., #Familiar model fitting notation.
-                       data = df_imp, #Using the linearly separable data.
-                       subset = train, #Using the training data.
-                       kernel = "radial", #Using a linear kernel.
-                       cost = 1e6,#A very large cost; default is 1.
-                       type = "eps",
-                       scale = FALSE) 
-  yhat.svm.mmc.linear = predict(svm.mmc.linear, newdata = df_imp[test, ])
-  summary(svm.mmc.linear)
-  mean(abs(yhat.svm.mmc.linear - df_imp$rental_income[test]))
+  set.seed(0)
+  rf.listing5000 = randomForest( X[train,] , y[train], importance = TRUE  , ntree = 5000                         )
+  rf.yhat5000 = predict(rf.listing5000, newdata = X[test, ])
+  plot(rf.yhat5000, y.test)
+  rf.mae5000 =  mean(abs(rf.yhat5000-y.test))
   
-  cv.svm = tune(svm,
-                            rental_income ~ .,
-                            data = df_imp[train, ],
-                            kernel = "radial",
-                            ranges = list(cost = 10^(seq(-5, .5, length = 100))))
+  set.seed(0)
+  rf.listing10000 = randomForest( X[train,] , y[train], importance = TRUE  , ntree = 10000                         )
+  rf.yhat10000 = predict(rf.listing10000, newdata = X[test, ])
+  plot(rf.yhat10000, y.test)
+  rf.mae10000 =  mean(abs(rf.yhat10000-y.test))
   
-  best.model = cv.svm$best.model
-  yhat.svm.best = predict(best.model, newdata = df_imp[test, ])
-  mean(abs(yhat.svm.best - df_imp$rental_income[test]))
+  set.seed(0)
+  oob.err = seq(80, 200, 10)
+  i = 1
+  
+  for (i in 1:length(oob.err)) {
+    fit = randomForest(X[train,], y[train], mtry = oob.err[i])
+    oob.err[i] = mean(abs(predict(fit, newdata = X[test, ])-y.test))
+    cat("We're performing iteration", i, "\n")
+  }
+  
+  #Visualizing the OOB error.
+  plot(seq(50, 200, 10), oob.err, pch = 16, type = "b",
+       xlab = "Variables Considered at Each Split",
+       ylab = "OOB Mean Absolute Error",
+       main = "Random Forest OOB Error Rates\nby # of Variables")
+  
+# ###Gradient Boosted Regression  
+ library(gbm)
+  
+ set.seed(0)
+ boost.listing = gbm(rental_income~.,data = df_imp[train,],
+                    distribution = "gaussian",
+                    n.trees = 10000,
+                    interaction.depth = 4,
+                    shrinkage = .1)
+ n.trees = seq(from = 100, to = 10000, by = 100)
+ predmat = predict(boost.listing, newdata = df_imp[-train, ], n.trees = n.trees)
+   #Inspecting the relative influence.
+   
+   par(mfrow = c(1, 1))
+   berr = with(df_imp[-train, ], apply(abs((predmat - rental_income)), 2, mean))
+   plot(n.trees, berr, pch = 16,
+        ylab = "Mean Absolute Error",
+        xlab = "# Trees",
+        main = "Boosting Test Error")
+   
+# ###Support Vector Machine   
+#   library(e1071)
+#   
+#   #Fitting a maximal margin classifier to the training data.
+#   svm.mmc.linear = svm(rental_income~., #Familiar model fitting notation.
+#                        data = df_imp, #Using the linearly separable data.
+#                        subset = train, #Using the training data.
+#                        kernel = "linear", #Using a linear kernel.
+#                        cost = 1e6,#A very large cost; default is 1.
+#                        type = "eps",
+#                        scale = FALSE) 
+#   yhat.svm.mmc.linear = predict(svm.mmc.linear, newdata = df_imp[test, ])
+#   summary(svm.mmc.linear)
+#   mean(abs(yhat.svm.mmc.linear - df_imp$rental_income[test]))
+#   
+#   svm.mmc.radial = svm(rental_income~., #Familiar model fitting notation.
+#                        data = df_imp, #Using the linearly separable data.
+#                        subset = train, #Using the training data.
+#                        kernel = "radial", #Using a linear kernel.
+#                        cost = 1e6,#A very large cost; default is 1.
+#                        type = "eps",
+#                        scale = FALSE) 
+#   yhat.svm.mmc.radial = predict(svm.mmc.radial, newdata = df_imp[test, ])
+#   summary(svm.mmc.radial)
+#   mean(abs(yhat.svm.mmc.radial - df_imp$rental_income[test]))
+#   
+#   cv.svm = tune(svm,
+#                             rental_income ~ .,
+#                             data = df_imp[train, ],
+#                             kernel = "radial",
+#                             ranges = list(cost = 10^(seq(-5, .5, length = 100))))
+#   
+#   best.model = cv.svm$best.model
+#   yhat.svm.best = predict(best.model, newdata = df_imp[test, ])
+#   mean(abs(yhat.svm.best - df_imp$rental_income[test]))
+#   
+   library(neuralnet)
+   # Build Neural Network 
+   n <- colnames(mat_dum_sca) 
+   colnames(mat_dum_sca) = gsub(" ", ".", n)
+   n <- colnames(mat_dum_sca)
+   colnames(mat_dum_sca) = gsub("'", "", n)
+   n <- colnames(mat_dum_sca) 
+   f <- as.formula(paste("y ~",  
+                         paste(n[!n %in% "y"], 
+                               collapse = " + "))) 
+  h=2
+  for(h in 2:7){
+      nn <- neuralnet(f, 
+                   data = mat_dum_sca[train,], hidden = c(h^2, h), 
+                   linear.output = TRUE) 
+   
+   # Predict on test data 
+   yhat.nn <- predict(nn, mat_dum_sca[test, ]) * attr(mat_dum_sca, 'scaled:scale')[ncol(mat_dum_sca)] + attr(mat_dum_sca, 'scaled:center')[ncol(mat_dum_sca)]
+   mean(abs(yhat.nn - mat_dum[test,ncol(mat_dum)]))}
+   # Plot the neural network 
+   plot(nn)
+   
+  #   ###Model Stack
+  library(h2o)
+  h2o.init()
+  n.h2o <- colnames(mat_dum) 
+  colnames(mat_dum) = gsub(" ", ".", n.h2o)
+  n <- colnames(mat_dum)
+  colnames(mat_dum) = gsub("'", "", n.h2o)
+  mat_dum_h2o = as.h2o(mat_dum)
+  y_names = "y"
+  X_names = setdiff(names(mat_dum_h2o), y)
+  list_split <- h2o.splitFrame(data = mat_dum_h2o, ratios = 0.8, seed = 0)
+  h2o.train <- list_split[[1]]
+  h2o.valid <- list_split[[2]]
+  
+  # Train & cross-validate a lasso model
+  best_lasso <- h2o.glm(
+    x = X_names, y = y_names, training_frame = h2o.train, alpha = 1,
+    remove_collinear_columns = TRUE, nfolds = 10, lambda = 40.37017, 
+    stopping_metric = "MAE", fold_assignment = "Modulo",
+    keep_cross_validation_predictions = TRUE, seed = 0
+  )
+  
+  
+  # Train & cross-validate a RF model
+  best_rf <- h2o.randomForest(
+    x = X_names, y = y_names, training_frame = h2o.train, ntrees = 1000, 
+    max_depth = 30, min_rows = 1, sample_rate = 0.8, nfolds = 10,
+    fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
+    seed = 0, stopping_rounds = 50, stopping_metric = "MAE",
+    stopping_tolerance = 0
+  )
+  
+  # Train & cross-validate a GBM model
+  best_gbm <- h2o.gbm(
+    x = X_names, y = y_names, training_frame = h2o.train, ntrees = 1100, learn_rate = 0.01,
+    max_depth = 7, min_rows = 5, sample_rate = 0.8, nfolds = 10,
+    fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
+    seed = 0, stopping_rounds = 50, stopping_metric = "MAE",
+    stopping_tolerance = 0
+  )
+  #   
+  #   # Train & cross-validate an XGBoost model
+  #   best_xgb <- h2o.xgboost(
+  #     x = X, y = Y, training_frame = train_h2o, ntrees = 5000, learn_rate = 0.05,
+  #     max_depth = 3, min_rows = 3, sample_rate = 0.8, categorical_encoding = "Enum",
+  #     nfolds = 10, fold_assignment = "Modulo", 
+  #     keep_cross_validation_predictions = TRUE, seed = 0, stopping_rounds = 50,
+  #     stopping_metric = "RMSE", stopping_tolerance = 0
+  #   )
+  #   
+  ensemble_tree <- h2o.stackedEnsemble(
+    x = X_names, y = y_names, training_frame = h2o.train, model_id = "my_tree_ensemble",
+    base_models = list(best_lasso, best_rf, best_gbm),
+    metalearner_algorithm = "drf"
+  )   
+  results.train = h2o.performance(ensemble_tree, newdata = h2o.train)
+  results.valid = h2o.performance(ensemble_tree, newdata = h2o.valid)
+  
+  
+#   #https://bradleyboehmke.github.io/HOML/regularized-regression.html
+#   library(plotmo)
+#   library(vip)
+#   #Fitting the lasso regression. Alpha = 1 for lasso regression.
+#   lasso.models = glmnet(X,y, alpha = 1, lambda = grid)
+#   plot_glmnet(lasso.models, label = 10)
+#   vip(lasso.models, num_features = 30, geom = "point")
+#   #Visualizing the lasso regression shrinkage.
+#   plot(lasso.models , xvar = "lambda", label = TRUE, main = "Lasso Regression")
+#   
+#   plot(cv.lasso.out, label = 20)
+#   vip(cv.lasso.out, num_features = 15, geom = "point")
+#   
+#   
+#   #Can visualize a variable importance plot.
+#   importance(rf.listing)
+#   varImpPlot(rf.listing)
+#   df_tree_imp = data.frame(importance(rf.listing))
+#   df_tree_imp = df_tree_imp %>%arrange(desc(X.IncMSE))
+#   
+#   par(mfrow = c(1, 1))
+#   summary(boost.listing)
+#   

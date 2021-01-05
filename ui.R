@@ -22,16 +22,18 @@ ui <- fluidPage(
     mainPanel(
       tabsetPanel (
         tabPanel("Market Overview",
-                fluidRow(
-                  plotOutput("neighborhood")),
-                fluidRow(
-                  plotOutput("room"))
+                 fluidRow(
+                   plotOutput("room_dist"),
+                   plotOutput("am_dist"),
+                   plotOutput("am_dist_type")
+                 )
         ),
         tabPanel("Amenities",
                  fluidRow(
-                   plotOutput("room_dist"),
-                   plotOutput("am_dist")
-                 )),
+                   plotOutput("neighborhood")),
+                 fluidRow(
+                   plotOutput("room"))
+                 ),
         tabPanel("data",
                 fluidRow(
                   plotOutput("corr"),
