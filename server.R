@@ -9,11 +9,9 @@ server <- function(input, output, session) {
   })
   
   
-  outupt$spartial <-renderPlot({
-    
-    partial(boston_rf, pred.var = "lstat", plot = TRUE,
-            plot.engine = "ggplot2")
-    
+  output$spartial <-renderPlot({
+    partial(rf.listing500, pred.var = as.character(input$amenity), plot = TRUE, train = X,  plot.engine = "ggplot2")
+    #X[X[, "bedrooms"] == 2,]
     })
   output$neighborhood <- renderPlot({
     
@@ -23,7 +21,17 @@ server <- function(input, output, session) {
   })
   
   output$room <- renderPlot({
-    
+    dtb = df_comb %>%
+      filter(level ==2)%>%
+      group_by(bedrooms, get(input$amenity))%>%
+      summarise(income=mean(rental_income))
+    dtb$bedrooms = as.factor(dtb$bedrooms)
+    dtb[,as.character(get(input$amenity))] = as.factor(get(input$amenity))
+    dtb %>% ggplot(aes(y = income, x = bedrooms, fill = input$amenity)) + 
+      geom_bar(stat = "identity", position = position_dodge()) +
+      scale_x_discrete(name ="Bedrooms Per Listings", 
+                       limits=c("0", "1", "2", "3", "4","5", "6", "7"))+
+      ggtitle("Monthly Income for Properties With or Without Ammenity")
   })
 
   output$room_dist <-renderPlot({
@@ -66,3 +74,11 @@ server <- function(input, output, session) {
     
   })
 }
+
+#
+#importance(rf.listing500) %>%arrange(desc(X.IncMSE))
+
+#p1 <- partial(, pred.var = c("lstat", "rm"), plot = TRUE, chull = TRUE)
+#p2 <- partial(boston_rf, pred.var = c("lstat", "rm"), plot = TRUE, chull = TRUE,
+#              palette = "magma")
+#grid.arrange(p1, p2, nrow = 1)  # Figure 7

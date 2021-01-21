@@ -30,6 +30,8 @@ ui <- fluidPage(
         ),
         tabPanel("Amenities",
                  fluidRow(
+                   plotOutput("spartial")),
+                 fluidRow(
                    plotOutput("neighborhood")),
                  fluidRow(
                    plotOutput("room"))

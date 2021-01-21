@@ -14,7 +14,7 @@ _This project only contains data on listings for properties rented in their enti
 ```{r setup, include=FALSE}
 ###Run Me First
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
-setwd("C:/Users/nates/Documents/Projects/AirBnb_Scrape")
+setwd("~/Projects/Ammenity_Valuation")
 detailed_listings_pre = read.csv("l0_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
 detailed_listings = read.csv("l1_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
 detailed_listings_post = read.csv("l2_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
@@ -47,240 +47,7 @@ if( "zipcode" %in% colnames(df_comb)){
   df_comb$zipcode = factor(df_comb$zipcode)}
 if( "neighborhood" %in% colnames(df_comb)){
   df_comb$neighborhood = factor(df_comb$neighborhood)}
-```
-
-# EDA
-A number of amenities are available in nearly all properties
-```{r frequent_amenities, echo = FALSE}
-totals = colSums(df_amenities_pre)
-totalnames = colnames(df_amenities_pre)
-df_amsums = data_frame(totalnames, totals)
-df_amsums = df_amsums%>% arrange(desc(totals))
-df_amsums%>%filter(totals> quantile(totals, .75) ) %>%
-  ggplot()+
-  geom_bar(aes(x = reorder(totalnames, desc(totals)), y = (totals/nrow(df_amsums))), stat = "identity") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-  ylab("Percentage of Listings w/ Amenity")+
-  xlab("Amenity")
-
-```
-
-While others were rarely offered, if ever.
-```{r infrequent_amenities, echo = FALSE}
-totals = colSums(df_amenities_pre)
-totalnames = colnames(df_amenities_pre)
-df_amsums = data_frame(totalnames, totals)
-df_amsums = df_amsums%>% arrange(desc(totals))
-df_amsums%>%filter(totals< quantile(totals, .25) ) %>%
-  ggplot()+
-  geom_bar(aes(x = reorder(totalnames, desc(totals)), y = (totals/nrow(df_amsums))), stat = "identity")+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-  ylab("Percentage of Listings w/ Amenity") +
-  xlab("Amenity")
-
-```
-
-In order to improve modeling on non-tree models I dropped amenities with near-zero variance, listed below.
-```{r amdrops, echo = FALSE }
-amdrops_pre = c(colnames(df_amenities_pre)) 
-amdrops = c(colnames(df_amenities))
-amdrops_fin = amdrops_pre[!(amdrops_pre %in% amdrops)]
-amdrops_fin
-```
-
-```{r var_amenity_count, echo=FALSE}
-amnames = c()
-for(ams in 1:length(df_amenities)){
-  if(colnames(df_amenities[ams]) %in% colnames(df_comb) ){
-  amnames =append(amnames, colnames(df_amenities[ams]))}
-}
-df_comb$amenity_count = rowSums(df_comb[amnames])
-```
-
-After variance drops I evaluated the number of amenities offered per listing, below. 
-
-```{r amenity distribution, echo = FALSE}
-
-getmode <- function(v) {
-   uniqv <- unique(v)
-   uniqv[which.max(tabulate(match(v, uniqv)))]
-}
-df_comb %>%
-  filter(level == 2)%>%
-  ggplot(aes(x = amenity_count)) +
-  geom_histogram() + 
-  ggtitle("Distribution of Amenities per Listing") +
-  xlab("# of Amenities Offered per Listing")+
-  geom_vline(aes(xintercept=median(amenity_count)),
-            color="blue", linetype="dashed", size=1)+
-  
-   geom_text(aes(x=median(amenity_count), y = 100, label="\nMedian"), color="blue", angle = 270, text=element_text(size=11)) +
-  
-  geom_text(aes(x = getmode(amenity_count), y = 100, label = "\nMode"), color = "red", angle = 270, text=element_text(size=11))+
-  
-  geom_vline(aes(xintercept=getmode(amenity_count)),
-            color="red", linetype="dashed", size=1)
-
-```
-
-
-There seems to be a positive relationship between the number of amenities a listing offers and number of rooms (bathrooms plus bedrooms) per listing or the price of the listing, respectively. 
-
-```{r price_amenity_count, echo = FALSE}
-df_comb %>%
-  filter(level == 2)%>%
-  ggplot(aes(y = price, 
-             x = amenity_count)) +
-  geom_smooth() +
-  geom_point(position = "jitter", size = 0.1, stroke = 0, color = "orange")+
-  ylim(0,1000) +
-  ylab("Rental Income") +
-  xlab("# of Amenities Offered per Listing")+
-  ggtitle("Nightly Price vs # of Amenities per Listing")
-```
-
-
-```{r rooms_amenity_count, echo = FALSE}
 df_comb$rooms = df_comb$bedrooms + df_comb$bathrooms
-df_comb %>%
-  filter(level == 2)%>%
-  ggplot(aes(y = amenity_count, 
-             x = rooms)) +
-  geom_smooth() +
-  geom_point(position = "jitter", color = "orange", size = 0.1, stroke = 0, shape = 16)+
- # ylim(0,10000) +
-  ylab("# of Amenities per Listing") +
-  xlab("# of Rooms Offered per Listing")+
-  ggtitle("# of Rooms per Listing vs # of Amenities per Listing")+ 
-  xlim(0,9)
-```
-
-However, when related to rental income, the number of amenities seems to be positively related only within specific tolerances. This may suggest that above a certain threshold, more amenities only overwhelm potential travelers, or, below a certain threshold, communicate disinterest on the part of the host.
-
-```{r disp_amenity_count, echo = FALSE}
-df_comb %>%
-  filter(level == 2)%>%
-  ggplot(aes(y = rental_income, 
-             x = amenity_count)) +
-  geom_smooth() +
-  geom_point(position = "jitter", size = 0.1, stroke = 0, color = "orange")+
-  ylim(0,10000) +
-  ylab("Rental Income") +
-  xlab("# of Amenities Offered per Listing")+
-  ggtitle("Monthly Rental Income vs # of Amenities per Listing")
-
-```
-
-# Rooms and Rental Income
-```{r rooms, echo = FALSE}
-
-
-df_comb%>%
-  filter(level == 2)%>%
-      ggplot(aes(y = rental_income, x = rooms)) +
-      geom_point() +
-      geom_smooth() +
-      ylab("Monthly Income per Listing") + 
-      xlab("# of Rooms per Listing")+
-      xlim(0,9) +
-      scale_x_continuous(breaks=seq(0,9,1))
-
-```
-
-# Neighborhood and Rental Income
-```{r neighborhood, echo = FALSE}
-df_comb %>%
-      group_by(neighborhood)%>%
-      filter(level == 2)%>%
-      filter(n()>10)%>%
-      ggplot(aes(x = reorder(neighborhood,rental_income, median),
-                 y = rental_income)) +
-      geom_boxplot() +
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
-      ylim(0,10000)
-```
-
-# Multicolinearity
-One issue I dealt with working with this data set was the sheer number of variables, which you can get a sense of from the corrplot below.
-```{r multicolinearity, echo = FALSE}
-library(RColorBrewer)
-cc = df_comb%>%
-               filter(level == 2)%>%
-               select(!level)%>%
-               #select(!amnames)%>%
-               select_if(is.numeric) %>%
-               select_if(~ !any(is.na(.)))%>%
-               #select(c(input$variable)) %>%
-               cor() 
-
-threshold <- 0
-cc0 <- cc
-diag(cc0) <- 0
-ok <- apply(abs(cc0) >= threshold, 1, any)
-cc = cc[ok, ok]
-
-
-               corrplot(cc,
-              #col = c("white", "red"),
-              #bg = "lightblue",
-              #method = "square",
-              order = "hclust",
-              type = "lower",
-             tl.cex = .1,
-             col = brewer.pal(n = 12, name = "RdYlBu")
-              #addrect = 4
-              )
-```
-
-Even when we examine amenities only and drop variables with a near-zero variance, we still have a lot of variables to work with. However, we can begin to get the sense of some clusters of related variables within the dataset.
-```{r ammulticolinearity, echo = FALSE}
-cca = df_amenities%>%
-               #filter(level == 2)%>%
-               #select(!level)%>%
-               #select(amnames)%>%
-               select_if(is.numeric) %>%
-               select_if(~ !any(is.na(.)))%>%
-               #select(c(input$variable)) %>%
-               cor() 
-
-threshold <- 0
-cca0 <- cca
-diag(cca0) <- 0
-ok <- apply(abs(cca0) >= threshold, 1, any)
-cca = cca[ok, ok]
-
-
-               corrplot(cca,
-              #col = c("white", "red"),
-              #bg = "lightblue",
-              #method = "square",
-              order = "hclust",
-              type = "lower",
-             tl.cex = .2,
-             col = brewer.pal(n = 12, name = "RdYlBu")
-              #addrect = 4
-              )
-
-
-```
-
-```{r corr}
-
-
-threshold <- .8
-cc0 <- cc
-diag(cc0) <- 0
-ok <- apply(abs(cc0) >= threshold, 1, any)
-cc = cc[ok, ok]
-cc
-# 
-#  detailed_listings = detailed_listings %>%
-#    select(star_rating, everything())
-#  
-#  nums <- unlist(lapply(detailed_listings, is.numeric)) 
-#  cors = data.frame(cor(detailed_listings[,nums], use = "na.or.complete"))
-#  cors = cors%>%
-#    arrange(star_rating)
 ```
 
 # Imputation Graphs
@@ -376,6 +143,79 @@ df_comb %>%
 
 ```
 
+# EDA
+A number of amenities are available in nearly all properties
+```{r frequent_amenities, echo = FALSE}
+totals = colSums(df_amenities_pre)
+totalnames = colnames(df_amenities_pre)
+df_amsums = data_frame(totalnames, totals)
+df_amsums = df_amsums%>% arrange(desc(totals))
+df_amsums%>%filter(totals> quantile(totals, .75) ) %>%
+  ggplot()+
+  geom_bar(aes(x = reorder(totalnames, desc(totals)), y = (totals/nrow(df_amsums))), stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ylab("Percentage of Listings w/ Amenity")+
+  xlab("Amenity")
+
+```
+
+While others were rarely offered, if ever.
+```{r infrequent_amenities, echo = FALSE}
+totals = colSums(df_amenities_pre)
+totalnames = colnames(df_amenities_pre)
+df_amsums = data_frame(totalnames, totals)
+df_amsums = df_amsums%>% arrange(desc(totals))
+df_amsums%>%filter(totals< quantile(totals, .25) ) %>%
+  ggplot()+
+  geom_bar(aes(x = reorder(totalnames, desc(totals)), y = (totals/nrow(df_amsums))), stat = "identity")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ylab("Percentage of Listings w/ Amenity") +
+  xlab("Amenity")
+
+```
+
+In order to improve modeling on non-tree models I dropped amenities with near-zero variance, listed below.
+```{r amdrops, echo = FALSE }
+amdrops_pre = c(colnames(df_amenities_pre)) 
+amdrops = c(colnames(df_amenities))
+amdrops_fin = amdrops_pre[!(amdrops_pre %in% amdrops)]
+amdrops_fin
+```
+
+```{r var_amenity_count, echo=FALSE}
+amnames = c()
+for(ams in 1:length(df_amenities)){
+  if(colnames(df_amenities[ams]) %in% colnames(df_comb) ){
+  amnames =append(amnames, colnames(df_amenities[ams]))}
+}
+df_comb$amenity_count = rowSums(df_comb[amnames])
+```
+
+After variance drops I evaluated the number of amenities offered per listing, below. 
+
+```{r amenity distribution, echo = FALSE}
+
+getmode <- function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+df_comb %>%
+  filter(level == 2)%>%
+  ggplot(aes(x = amenity_count)) +
+  geom_histogram() + 
+  ggtitle("Distribution of Amenities per Listing") +
+  xlab("# of Amenities Offered per Listing")+
+  geom_vline(aes(xintercept=median(amenity_count)),
+            color="blue", linetype="dashed", size=1)+
+  
+   geom_text(aes(x=median(amenity_count), y = 100, label="\nMedian"), color="blue", angle = 270, text=element_text(size=11)) +
+  
+  geom_text(aes(x = getmode(amenity_count), y = 100, label = "\nMode"), color = "red", angle = 270, text=element_text(size=11))+
+  
+  geom_vline(aes(xintercept=getmode(amenity_count)),
+            color="red", linetype="dashed", size=1)
+
+```
 
 ```{r dummy_x_split, echo = FALSE}
 
@@ -386,14 +226,432 @@ df_comb %>%
 df_imp = df_comb %>%
   select(rental_income, everything()) %>% filter(level ==2)
 df_imp = df_imp[complete.cases(df_imp),]
-x <- model.matrix(rental_income ~.,
+X <- model.matrix(rental_income ~.,
                      data = df_imp)[,-1]
 
 y = df_imp$rental_income
 set.seed(0)
-train = sample(1:nrow(x), 7*nrow(x)/10)
+train = sample(1:nrow(X), 7*nrow(X)/10)
 test = (-train)
 y.test = y[test]
 grid = 10^seq(5, -2, length = 100)
 ```
+
+```{r tree_imp, echo = FALSE}
+library(randomForest)
+set.seed(0)
+rf.listing500 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 500 )
+df_tree_imp = data.frame(importance(rf.listing500))
+df_tree_imp = df_tree_imp %>%arrange(desc(X.IncMSE))#%>% filter(totalnames)
+rows_to_keep <- which(row.names(df_tree_imp) %in% totalnames)
+df_tree_imp <- df_tree_imp[rows_to_keep,]
+```
+There seems to be a positive relationship between the number of amenities a listing offers and number of rooms (bathrooms plus bedrooms) per listing or the price of the listing, respectively. 
+
+```{r price_amenity_count, echo = FALSE}
+df_comb %>%
+  filter(level == 2)%>%
+  ggplot(aes(y = price, 
+             x = amenity_count)) +
+  geom_smooth() +
+  geom_point(position = "jitter", size = 0.1, stroke = 0, color = "orange")+
+  ylim(0,1000) +
+  ylab("Nightly Price (Weeknight)") +
+  xlab("# of Amenities Offered per Listing")+
+  ggtitle("Nightly Price vs # of Amenities per Listing")
+```
+
+
+```{r rooms_amenity_count, echo = FALSE}
+
+df_comb %>%
+  filter(level == 2)%>%
+  ggplot(aes(y = amenity_count, 
+             x = rooms)) +
+  geom_smooth() +
+  geom_point(position = "jitter", color = "orange", size = 0.1, stroke = 0, shape = 16)+
+ # ylim(0,10000) +
+  ylab("# of Amenities per Listing") +
+  xlab("# of Rooms Offered per Listing")+
+  ggtitle("# of Rooms per Listing vs # of Amenities per Listing")+ 
+  xlim(0,9)
+```
+
+However, when related to rental income, the number of amenities seems to be positively related only within specific tolerances. This may suggest that above a certain threshold, more amenities only overwhelm potential travelers, or, below a certain threshold, communicate disinterest on the part of the host.
+
+```{r disp_amenity_count, echo = FALSE}
+library(pdp)
+library(randomForest)
+df_comb %>%
+  filter(level == 2)%>%
+  ggplot(aes(y = rental_income, 
+             x = amenity_count)) +
+  geom_smooth() +
+  geom_point(position = "jitter", size = 0.1, stroke = 0, color = "orange")+
+  ylim(0,10000) +
+  ylab("Rental Income") +
+  xlab("# of Amenities Offered per Listing")+
+  ggtitle("Monthly Rental Income vs # of Amenities per Listing")
+#rf.listing500 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 500    
+partial(rf.listing500, pred.var = "amenity_count",
+             plot = TRUE, train = X,  plot.engine = "ggplot2")
+
+```
+
+# Rooms and Rental Income
+```{r rooms, echo = FALSE}
+
+
+df_comb%>%
+  filter(level == 2)%>%
+      ggplot(aes(y = rental_income, x = bedrooms)) +
+      geom_point() +
+      geom_smooth() +
+      ylab("Monthly Income per Listing") + 
+      xlab("# of Rooms per Listing")+
+      xlim(0,9) +
+      scale_x_continuous(breaks=seq(0,9,1))
+
+partial(rf.listing500, pred.var = "bedrooms",
+             plot = TRUE, train = X,  plot.engine = "ggplot2")
+```
+
+# Neighborhood and Rental Income
+```{r neighborhood, echo = FALSE}
+df_comb %>%
+      group_by(neighborhood)%>%
+      filter(level == 2)%>%
+      filter(n()>10)%>%
+      ggplot(aes(x = reorder(neighborhood,rental_income, median),
+                 y = rental_income)) +
+      geom_boxplot() +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+      ylim(0,10000)
+```
+
+# Multicolinearity
+One issue I dealt with working with this data set was the sheer number of variables, which you can get a sense of from the corrplot below.
+```{r multicolinearity, echo = FALSE}
+library(RColorBrewer)
+cc = df_comb%>%
+               filter(level == 2)%>%
+               select(!level)%>%
+               #select(!amnames)%>%
+               select_if(is.numeric) %>%
+               select_if(~ !any(is.na(.)))%>%
+               #select(c(input$variable)) %>%
+               cor() 
+
+threshold <- 0
+cc0 <- cc
+diag(cc0) <- 0
+ok <- apply(abs(cc0) >= threshold, 1, any)
+cc = cc[ok, ok]
+
+
+               corrplot(cc,
+              #col = c("white", "red"),
+              #bg = "lightblue",
+              #method = "square",
+              order = "hclust",
+              type = "lower",
+             tl.cex = .1,
+             col = brewer.pal(n = 12, name = "RdYlBu")
+              #addrect = 4
+              )
+```
+
+Even when we examine amenities only and drop variables with a near-zero variance, we still have a lot of variables to work with. However, we can begin to get the sense of some clusters of related variables within the dataset.
+```{r ammulticolinearity, echo = FALSE}
+cca = df_amenities%>%
+               #filter(level == 2)%>%
+               #select(!level)%>%
+               #select(amnames)%>%
+               select_if(is.numeric) %>%
+               select_if(~ !any(is.na(.)))%>%
+               #select(c(input$variable)) %>%
+               cor() 
+
+threshold <- 0
+cca0 <- cca
+diag(cca0) <- 0
+ok <- apply(abs(cca0) >= threshold, 1, any)
+cca = cca[ok, ok]
+
+
+               corrplot(cca,
+              #col = c("white", "red"),
+              #bg = "lightblue",
+              #method = "square",
+              order = "hclust",
+              type = "lower",
+             tl.cex = .2,
+             col = brewer.pal(n = 12, name = "RdYlBu")
+              #addrect = 4
+              )
+
+
+```
+
+We see a fairly high correlation between certain categories of children's amenities (Baby baths with changing tables, for example), but not necessarily others (see changing tables and bathtubs), suggesting that owners may view some mixes of amenities as redundant.
+
+```{r child, echo=FALSE}
+childstring = c("Baby.bath","Baby.monitor","Babysitter.recommendations",
+                          "Changing.table","Children.s.books.and.toys","Children.s.dinnerware",
+                          "Crib","Family.kid.friendly" ,"High.chair","Outlet.covers",
+                          "Pack..n.Play.travel.crib","Playground",
+                          "Table.corner.guards","Fireplace.guards","Playground","Bathtub")
+
+df_child = df_amenities[(names(df_amenities) %in% childstring)]
+
+
+#df_child%>%
+#  ggplot(aes(x = as.factor(ChildScore))) +
+#  geom_histogram(stat = "count")
+#colSums(df_child)
+
+ccc = df_child%>%
+               #filter(level == 2)%>%
+               #select(!level)%>%
+               #select(amnames)%>%
+               select_if(is.numeric) %>%
+               select_if(~ !any(is.na(.)))%>%
+               #select(c(input$variable)) %>%
+               cor() 
+
+threshold <- 0
+ccc0 <- ccc
+diag(ccc0) <- 0
+ok <- apply(abs(ccc0) >= threshold, 1, any)
+ccc = ccc[ok, ok]
+
+
+               corrplot(ccc,
+              #col = c("white", "red"),
+              #bg = "lightblue",
+              #method = "square",
+              order = "hclust",
+              type = "lower",
+             #tl.cex = .2,
+             col = brewer.pal(n = 12, name = "RdYlBu")
+              #addrect = 4
+              )
+
+
+
+```
+We also see correlations between access-related amenities that correspond to different locations within the listing.
+```{r access, echo = FALSE}
+
+
+amstring = c("Accessible.height.bed" ,"Accessible.height.toilet",
+                           "Elevator", "Extra.space.around.bed", "Fixed.grab.bars.for.shower",
+                           "Flat.path.to.guest.entrance", "Handheld.shower.head",
+                           "No.stairs.or.steps.to.enter", "Roll.in.shower", 
+                           "Wheelchair.accessible", "Well.lit.path.to.entrance", "Wide.entrance",
+                           "Wide.doorway.to.guest.bathroom", "Wide.clearance.to.shower", 
+                           "Wide.entrance.for.guests" ,"Wide.entryway", "Wide.hallways")
+
+df_access = df_amenities[(names(df_amenities) %in% amstring)]
+
+ccac = df_access%>%
+               #filter(level == 2)%>%
+               #select(!level)%>%
+               #select(amnames)%>%
+               select_if(is.numeric) %>%
+               select_if(~ !any(is.na(.)))%>%
+               #select(c(input$variable)) %>%
+               cor() 
+
+threshold <- 0
+ccac0 <- ccac
+diag(ccac0) <- 0
+ok <- apply(abs(ccac0) >= threshold, 1, any)
+ccac = ccac[ok, ok]
+
+
+               corrplot(ccac,
+              #col = c("white", "red"),
+              #bg = "lightblue",
+              #method = "square",
+              order = "hclust",
+              type = "lower",
+             #tl.cex = .2,
+             col = brewer.pal(n = 12, name = "RdYlBu")
+              #addrect = 4
+              )
+
+```
+Not a lot of relationships here. Everything presumed incidental.
+
+```{r essentials, echo = FALSE}
+
+cstring = c("Shampoo", "Shower.gel", "Conditioner", "Extra.pillows.and.blankets", "Hair.dryer" , 
+                           "Hangers", "Iron", "Private.entrance", "Private.living.room", "Lock.on.bedroom.door", 
+                           "Air.conditioning", "Heating", "Portable.fans", "Ceiling.fan","Laundromat.nearby","Hot.water",
+                           "Ethernet.connection","Pocket.wifi","Laptop.friendly.workspace" ,
+                           "TV","Cable.TV","Record.player","Sound.system","Indoor.fireplace" 
+                           )
+
+df_common = df_amenities[(names(df_amenities) %in% cstring)]
+
+ccco = df_common%>%
+               #filter(level == 2)%>%
+               #select(!level)%>%
+               #select(amnames)%>%
+               select_if(is.numeric) %>%
+               select_if(~ !any(is.na(.)))%>%
+               #select(c(input$variable)) %>%
+               cor() 
+
+threshold <- 0
+ccco0 <- ccco
+diag(ccco0) <- 0
+ok <- apply(abs(ccco0) >= threshold, 1, any)
+ccco = ccco[ok, ok]
+
+
+               corrplot(ccco,
+              #col = c("white", "red"),
+              #bg = "lightblue",
+              #method = "square",
+              order = "hclust",
+              type = "lower",
+             #tl.cex = .2,
+             col = brewer.pal(n = 12, name = "RdYlBu")
+              #addrect = 4
+              )
+```
+Lots of obvious relationships in the kitchen - listings with ovens tend to have stoves, cooking basics, microwaves, and refrigerators and there's a strong relationship between microwave and coffee machines. Interestingly, there isn't much of a relationship between listings that offer a Keurig or pour-over coffee and more complete kitchen amenities, suggesting that these may be more frequently offered in listings that offer a small coffee/snack station but not a full-service kitchen.
+```{r kitchen}
+
+
+
+kstring = c("Microwave","Cooking.basics", "Coffee.maker", "Nespresso.machine" , "Pour.Over.Coffee", 
+                            "Keurig.coffee.machine", 
+                            "Refrigerator", "Mini.fridge", "Freezer", "Dishwasher", "Trash.compacter", "Dishes.and.silverware",
+                            "Stove", "Oven", "Bread.maker", "Refrigerator", "Baking.sheet" , "Barbecue.utensils", "Rice.Maker",
+                            "Baking.sheet", "Convection.oven", "Espresso.machine", "Full.kitchen", "Kitchen","Kitchenette", "Nespresso.machine",
+                            "Pour.Over.Coffee")
+df_kitchen = df_amenities[(names(df_amenities) %in% kstring)]
+
+
+cck = df_kitchen%>%
+               #filter(level == 2)%>%
+               #select(!level)%>%
+               #select(amnames)%>%
+               select_if(is.numeric) %>%
+               select_if(~ !any(is.na(.)))%>%
+               #select(c(input$variable)) %>%
+               cor() 
+
+threshold <- 0
+cck0 <- cck
+diag(cck0) <- 0
+ok <- apply(abs(cck0) >= threshold, 1, any)
+cck = cck[ok, ok]
+
+
+               corrplot(cck,
+              #col = c("white", "red"),
+              #bg = "lightblue",
+              #method = "square",
+              order = "hclust",
+              type = "lower",
+             #tl.cex = .2,
+             col = brewer.pal(n = 12, name = "RdYlBu")
+              #addrect = 4
+              )
+
+```
+Some obvious correlations in facilities - listings with pools were more likely to have gyms and hottubs. Listings with gyms were less likely to offer free street parking, suggesting that they typically come in larger buildings in the city center where street parking isn't available. 
+
+```{r fac, echo = FALSE}
+fstring = c("Free.parking.on.premises", "Free.street.parking", "Paid.parking.off.premises", 
+                               "Paid.parking.on.premises", "EV.charger" , "Gym", "Pool", "Hot.tub", "Single.level.home" )
+
+df_facilities = df_amenities[(names(df_amenities) %in% fstring)]
+
+ccf = df_facilities%>%
+               #filter(level == 2)%>%
+               #select(!level)%>%
+               #select(amnames)%>%
+               select_if(is.numeric) %>%
+               select_if(~ !any(is.na(.)))%>%
+               #select(c(input$variable)) %>%
+               cor() 
+
+threshold <- 0
+ccf0 <- ccf
+diag(ccf0) <- 0
+ok <- apply(abs(ccf0) >= threshold, 1, any)
+ccf = ccf[ok, ok]
+
+
+               corrplot(ccf,
+              #col = c("white", "red"),
+              #bg = "lightblue",
+              #method = "square",
+              order = "hclust",
+              type = "lower",
+             #tl.cex = .2,
+             col = brewer.pal(n = 12, name = "RdYlBu")
+              #addrect = 4
+              )
+```
+
+```{r outdoor}
+ostring=c("BBQ.grill", "Patio.or.balcony", "Garden.or.backyard")
+
+df_outdoor = df_amenities[(names(df_amenities) %in% ostring)]
+cco = df_outdoor%>%
+               #filter(level == 2)%>%
+               #select(!level)%>%
+               #select(amnames)%>%
+               select_if(is.numeric) %>%
+               select_if(~ !any(is.na(.)))%>%
+               #select(c(input$variable)) %>%
+               cor() 
+
+threshold <- 0
+cco0 <- cco
+diag(cco0) <- 0
+ok <- apply(abs(cco0) >= threshold, 1, any)
+cco = cco[ok, ok]
+
+
+               corrplot(cco,
+              #col = c("white", "red"),
+              #bg = "lightblue",
+              #method = "square",
+              order = "hclust",
+              type = "lower",
+             #tl.cex = .2,
+             col = brewer.pal(n = 12, name = "RdYlBu")
+              #addrect = 4
+              )
+
+```
+
+```{r corr}
+
+
+threshold <- .8
+cc0 <- cc
+diag(cc0) <- 0
+ok <- apply(abs(cc0) >= threshold, 1, any)
+cc = cc[ok, ok]
+cc
+# 
+#  detailed_listings = detailed_listings %>%
+#    select(star_rating, everything())
+#  
+#  nums <- unlist(lapply(detailed_listings, is.numeric)) 
+#  cors = data.frame(cor(detailed_listings[,nums], use = "na.or.complete"))
+#  cors = cors%>%
+#    arrange(star_rating)
+```
+
+
+
 
