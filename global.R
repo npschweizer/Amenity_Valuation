@@ -162,33 +162,34 @@ df_logistics%>%cor()
 #####################
 ##Split and Dummify##
 #####################
-#   library(proxy)
-#   library(caret)
-#     df_imp = df_comb %>%
-#        select(rental_income, everything()) %>% filter(level ==2)#%>%
-#     df_imp = df_imp%>% filter(bedrooms<5)
-#     df_imp = df_imp%>%filter(rental_income != 0)
-#     df_imp = df_imp[complete.cases(df_imp),]
-#     df_imp$level = NULL
-#     X <- model.matrix(rental_income ~.,
-#                       data = df_imp)[,-1]
-#    
-#    y = df_imp$rental_income
-#    mat_dum = cbind(X,y)
-#    maxs <- apply(mat_dum, 2, max)  
-#    mins <- apply(mat_dum, 2, min)
-#    mat_dum_sca = scale(mat_dum,  
-#                  center = mins, 
-#                  scale = maxs - mins)
-#   set.seed(0)
-#   train = sample(1:nrow(df_imp), 8*nrow(df_imp)/10)
-#   test = (-train)
-#   y.test = y[test]
-#   X.train = X[train,]
-#   X.test = X[test,]
-#  
-#   
-#   
+   # library(proxy)
+   # library(caret)
+   #   df_imp = df_comb %>%
+   #      select(rental_income, everything()) %>% filter(level ==2)#%>%
+   #   df_imp = df_imp%>% filter(bedrooms<5)
+   #   df_imp = df_imp%>%filter(rental_income != 0)
+   #   df_imp = df_imp%>%filter(rental_income < 10000)
+   #   df_imp = df_imp[complete.cases(df_imp),]
+   #   df_imp$level = NULL
+   #   X <- model.matrix(rental_income ~.,
+   #                     data = df_imp)[,-1]
+   #  
+   #  y = df_imp$rental_income
+   #  mat_dum = cbind(X,y)
+   #  maxs <- apply(mat_dum, 2, max)  
+   #  mins <- apply(mat_dum, 2, min)
+   #  mat_dum_sca = scale(mat_dum,  
+   #                center = mins, 
+   #                scale = maxs - mins)
+   # set.seed(0)
+   # train = sample(1:nrow(df_imp), 8*nrow(df_imp)/10)
+   # test = (-train)
+   # y.test = y[test]
+   # X.train = X[train,]
+   # X.test = X[test,]
+   # 
+   # 
+   
 # #  #DisSamp = maxDissim(a = X.test, b = X.train, n = nrow(X)/10)
 # # 
 # #  
@@ -196,144 +197,151 @@ df_logistics%>%cor()
 # ##Models##
 # ##########
 #   
-# #Running ElasticNet 10-fold cross validation.
-#  rsq <- function(x, y) summary(lm(y~x))$r.squared
-#  grid = 10^seq(5, -2, length = 100)
-#  agrid = seq(from = 0,
-#              to = 1,
-#              by = .1) 
-#  set.seed(0)
-#  lasso.models = glmnet(X[train, ],y[train], alpha = 1, lambda = grid)
-#  cv.lasso.out = cv.glmnet(X[train, ], y[train],type.measure = "mae",
-#                          lambda = grid, alpha = 1, nfolds = 10)
-#  plot(cv.lasso.out, main = "Lasso Regression\n")
-#  bestlambda.lasso = cv.lasso.out$lambda.min
-#  
-#  lasso.best.yhat = predict(lasso.models, s = bestlambda.lasso, newx = X[test, ])
-#  lasso.best.train.yhat = predict(lasso.models, s = bestlambda.lasso, newx = X[train, ])
-#  lasso.r2.train = sum((y[train] - lasso.best.train.yhat)^2)/sum((y[train]-mean(y[train]))^2)
-#  lasso.r2.test = sum((y[test] - lasso.best.yhat)^2)/ sum((y.test-mean(y.test))^2)
-#  plot(y.test,lasso.best.yhat)
-#  abline(0,1)
-#  
-#  lasso.mae.train = mean(abs(lasso.best.train.yhat-y[train]))
-#  lasso.mae.test = mean(abs(lasso.best.yhat-y.test))
-#  
-#  set.seed(0)
-#  ridge.models = glmnet(X[train, ],y[train], alpha = 0, lambda = grid)
-#  cv.ridge.out = cv.glmnet(X[train, ], y[train],type.measure = "mae",
-#                           lambda = grid, alpha = 0, nfolds = 10)
-#  plot(cv.ridge.out, main = "Ridge Regression\n")
-#  bestlambda.ridge = cv.ridge.out$lambda.min
-#  ridge.best.yhat = predict(ridge.models, s = bestlambda.ridge, newx = X[test, ])
-#  ridge.best.train.yhat = predict(ridge.models, s = bestlambda.ridge, newx = X[train, ])
-#  ridge.r2.train = sum((y[train] - ridge.best.train.yhat)^2)/sum((y[train]-mean(y[train]))^2)
-#  ridge.r2.test = sum((y[test] - ridge.best.yhat)^2)/ sum((y.test-mean(y.test))^2)
-#  plot(y.test,ridge.best.yhat)
-#  abline(0,1)
-#  
-#  ridge.mae.train = mean(abs(ridge.best.train.yhat-y[train]))
-#  ridge.mae.test = mean(abs(ridge.best.yhat-y.test))
-#  
+ #Running ElasticNet 10-fold cross validation.
+  #  rsq <- function(x, y) summary(lm(y~x))$r.squared
+  #  grid = 10^seq(5, -2, length = 100)
+  #  agrid = seq(from = 0,
+  #              to = 1,
+  #              by = .1) 
+  #   set.seed(0)
+  #  lasso.models = glmnet(X[train, ],y[train], alpha = 1, lambda = grid)
+  # cv.lasso.out = cv.glmnet(X[train, ], y[train],type.measure = "mae",
+  #                         lambda = grid, alpha = 1, nfolds = 10)
+  # plot(cv.lasso.out, main = "Lasso Regression\n")
+  # bestlambda.lasso = cv.lasso.out$lambda.min
+  # 
+  # lasso.best.yhat = predict(lasso.models, s = bestlambda.lasso, newx = X[test, ])
+  # lasso.best.train.yhat = predict(lasso.models, s = bestlambda.lasso, newx = X[train, ])
+  # lasso.r2.train = sum((y[train] - lasso.best.train.yhat)^2)/sum((y[train]-mean(y[train]))^2)
+  # lasso.r2.test = sum((y[test] - lasso.best.yhat)^2)/ sum((y.test-mean(y.test))^2)
+  # plot(y.test,lasso.best.yhat)
+  # abline(0,1)
+  # 
+  # lasso.mae.train = mean(abs(lasso.best.train.yhat-y[train]))
+  # lasso.mae.test = mean(abs(lasso.best.yhat-y.test))
+  # 
+  # set.seed(0)
+  # ridge.models = glmnet(X[train, ],y[train], alpha = 0, lambda = grid)
+  # cv.ridge.out = cv.glmnet(X[train, ], y[train],type.measure = "mae",
+  #                          lambda = grid, alpha = 0, nfolds = 10)
+  # plot(cv.ridge.out, main = "Ridge Regression\n")
+  # bestlambda.ridge = cv.ridge.out$lambda.min
+  # ridge.best.yhat = predict(ridge.models, s = bestlambda.ridge, newx = X[test, ])
+  # ridge.best.train.yhat = predict(ridge.models, s = bestlambda.ridge, newx = X[train, ])
+  # ridge.r2.train = sum((y[train] - ridge.best.train.yhat)^2)/sum((y[train]-mean(y[train]))^2)
+  # ridge.r2.test = sum((y[test] - ridge.best.yhat)^2)/ sum((y.test-mean(y.test))^2)
+  # plot(y.test,ridge.best.yhat)
+  # abline(0,1)
+  # 
+  # ridge.mae.train = mean(abs(ridge.best.train.yhat-y[train]))
+  # ridge.mae.test = mean(abs(ridge.best.yhat-y.test))
+
 # #  ###Recursive Feature elimination
-# # # 
+# # #
 # # #  ctrl =  rfeControl(functions = lmFuncs,
 # # #                   method = "repeatedcv",
 # # #                   repeats = 5,
 # # #                   verbose = FALSE)
 # # #  subsets <- c(1:5, 10, 15, 25)
-# # # 
+# # #
 # # #  rfe(x = x, y = y,
 # # #      sizes = 5,
 # # #      rfeControl = ctrl)
 # # #  options(error=recover)
-# # 
-#  ###Random Forest
-#   library(randomForest)
-#   
-#   #Fitting an initial random forest to the training subset.
-#   set.seed(0)
-#   rf.listing500 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 500                           )
-#   rf.yhat500 = predict(rf.listing500, newdata = X[test, ])
-#   rf.train.yhat500 = predict(rf.listing500, newdata = X[train, ])
-#   plot(y.test,rf.yhat500)
-#   abline(0,1)
-#   
-#   rf.r2.500.train = sum((y[train] - rf.train.yhat500)^2)/sum((y[train]-mean(y[train]))^2)
-#   rf.r2.500.test = sum((y[test] - rf.yhat500)^2)/ sum((y.test-mean(y.test))^2)
-#   
-#   rf.mae500.train = mean(abs(rf.train.yhat500-y[train])) 
-#   rf.mae500.test = mean(abs(rf.yhat500-y.test)) 
-#   
-#   rf.listing1000 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 1000                           )
-#   rf.yhat1000 = predict(rf.listing1000, newdata = X[test, ])
-#   rf.train.yhat1000 = predict(rf.listing1000, newdata = X[train, ])
-#   plot(y.test,rf.yhat1000)
-#   abline(0,1)
-#   
-#   rf.r2.1000.train = sum((y[train] - rf.train.yhat1000)^2)/sum((y[train]-mean(y[train]))^2)
-#   rf.r2.1000.test = sum((y[test] - rf.yhat1000)^2)/ sum((y.test-mean(y.test))^2)
-#   
-#   rf.mae1000.train = mean(abs(rf.train.yhat1000-y[train])) 
-#   rf.mae1000.test = mean(abs(rf.yhat1000-y.test)) 
-#   
-#   rf.listing2500 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 2500                           )
-#   rf.yhat2500 = predict(rf.listing2500, newdata = X[test, ])
-#   rf.train.yhat2500 = predict(rf.listing2500, newdata = X[train, ])
-#   plot(y.test,rf.yhat2500)
-#   abline(0,1)
-#   
-#   rf.r2.2500.train = sum((y[train] - rf.train.yhat2500)^2)/sum((y[train]-mean(y[train]))^2)
-#   rf.r2.2500.test = sum((y[test] - rf.yhat2500)^2)/ sum((y.test-mean(y.test))^2)
-#   
-#   rf.mae2500.train = mean(abs(rf.train.yhat2500-y[train])) 
-#   rf.mae2500.test = mean(abs(rf.yhat2500-y.test)) 
-#   
+# #
+# #  ###Random Forest
+#    library(randomForest)
+# #
+#    #Fitting an initial random forest to the training subset.
+#    set.seed(0)
+#    rf.listing500 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 100                           )
+#    rf.yhat500 = predict(rf.listing500, newdata = X[test, ])
+#    rf.train.yhat500 = predict(rf.listing500, newdata = X[train, ])
+#    plot(y.test,rf.yhat500)
+#    abline(0,1)
+# 
+#    rf.r2.500.train = sum((y[train] - rf.train.yhat500)^2)/sum((y[train]-mean(y[train]))^2)
+#    rf.r2.500.test = sum((y[test] - rf.yhat500)^2)/ sum((y.test-mean(y.test))^2)
+# 
+#    rf.mae500.train = mean(abs(rf.train.yhat500-y[train]))
+#    rf.mae500.test = mean(abs(rf.yhat500-y.test))
+# 
+# rf.listing1000 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 1000                           )
+# rf.yhat1000 = predict(rf.listing1000, newdata = X[test, ])
+# rf.train.yhat1000 = predict(rf.listing1000, newdata = X[train, ])
+# plot(y.test,rf.yhat1000)
+# abline(0,1)
+# 
+# rf.r2.1000.train = sum((y[train] - rf.train.yhat1000)^2)/sum((y[train]-mean(y[train]))^2)
+# rf.r2.1000.test = sum((y[test] - rf.yhat1000)^2)/ sum((y.test-mean(y.test))^2)
+# 
+# rf.mae1000.train = mean(abs(rf.train.yhat1000-y[train]))
+# rf.mae1000.test = mean(abs(rf.yhat1000-y.test))
+# 
+# rf.listing2500 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 2500                           )
+# rf.yhat2500 = predict(rf.listing2500, newdata = X[test, ])
+# rf.train.yhat2500 = predict(rf.listing2500, newdata = X[train, ])
+# plot(y.test,rf.yhat2500)
+# abline(0,1)
+# 
+# rf.r2.2500.train = sum((y[train] - rf.train.yhat2500)^2)/sum((y[train]-mean(y[train]))^2)
+# rf.r2.2500.test = sum((y[test] - rf.yhat2500)^2)/ sum((y.test-mean(y.test))^2)
+# 
+# rf.mae2500.train = mean(abs(rf.train.yhat2500-y[train]))
+# rf.mae2500.test = mean(abs(rf.yhat2500-y.test))
+# 
 #   rf.listing5000 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 5000                           )
 #   rf.yhat5000 = predict(rf.listing5000, newdata = X[test, ])
 #   rf.train.yhat5000 = predict(rf.listing5000, newdata = X[train, ])
 #   plot(y.test,rf.yhat5000)
 #   abline(0,1)
-#   
+# 
 #   rf.r2.5000.train = sum((y[train] - rf.train.yhat5000)^2)/sum((y[train]-mean(y[train]))^2)
 #   rf.r2.5000.test = sum((y[test] - rf.yhat5000)^2)/ sum((y.test-mean(y.test))^2)
-#   
-#   rf.mae5000.train = mean(abs(rf.train.yhat5000-y[train])) 
-#   rf.mae5000.test = mean(abs(rf.yhat5000-y.test)) 
-#   
+# 
+#   rf.mae5000.train = mean(abs(rf.train.yhat5000-y[train]))
+#   rf.mae5000.test = mean(abs(rf.yhat5000-y.test))
+# 
 #   rf.listing10000 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 10000                           )
 #   rf.yhat10000 = predict(rf.listing10000, newdata = X[test, ])
 #   rf.train.yhat10000 = predict(rf.listing10000, newdata = X[train, ])
 #   plot(y.test,rf.yhat10000)
 #   abline(0,1)
-#   
+# 
 #   rf.r2.10000.train = sum((y[train] - rf.train.yhat10000)^2)/sum((y[train]-mean(y[train]))^2)
 #   rf.r2.10000.test = sum((y[test] - rf.yhat10000)^2)/ sum((y.test-mean(y.test))^2)
-#   
-#   rf.mae10000.train = mean(abs(rf.train.yhat10000-y[train])) 
-#   rf.mae10000.test = mean(abs(rf.yhat10000-y.test)) 
-#   
 # 
-#   
+#   rf.mae10000.train = mean(abs(rf.train.yhat10000-y[train]))
+#   rf.mae10000.test = mean(abs(rf.yhat10000-y.test))
+# 
+# 
+# 
 #   set.seed(0)
-#   oob.err = seq(80, 200, 10)
+#   oob.err.test = seq(80, 200, 10)
+#   oob.err.train = oob.err.test
 #   i = 1
-#   
+# 
 #   for (i in 1:length(oob.err)) {
 #     fit = randomForest(X[train,], y[train], mtry = oob.err[i])
-#     oob.err[i] = mean(abs(predict(fit, newdata = X[test, ])-y.test))
+#     oob.err.test[i] = mean(abs(predict(fit, newdata = X[test, ])-y.test))
+#     oob.err.train[i] = mean(abs(predict(fit, newdata = X[train, ])-y[train]))
 #     cat("We're performing iteration", i, "\n")
 #   }
-#   
+# 
 #   #Visualizing the OOB error.
-#   plot(seq(50, 200, 10), oob.err, pch = 16, type = "b",
+#   par(mfrow =c(1,2))
+#   plot(seq(80, 200, 10), oob.err.test, pch = 16, type = "b",
 #        xlab = "Variables Considered at Each Split",
 #        ylab = "OOB Mean Absolute Error",
-#        main = "Random Forest OOB Error Rates\nby # of Variables")
+#        main = "Test Random Forest OOB Error Rates\nby # of Variables")
+#   plot(seq(80, 200, 10), oob.err.train, pch = 16, type = "b",
+#        xlab = "Variables Considered at Each Split",
+#        ylab = "OOB Mean Absolute Error",
+#        main = "Train Random Forest OOB Error Rates\nby # of Variables")
 #   
-# # ###Gradient Boosted Regression  
+# # # ###Gradient Boosted Regression
 #  library(gbm)
-#   
+# 
 #  set.seed(0)
 #  boost.listing = gbm(rental_income~.,data = df_imp[train,],
 #                     distribution = "gaussian",
@@ -341,41 +349,51 @@ df_logistics%>%cor()
 #                     interaction.depth = 4,
 #                     shrinkage = .1)
 #  n.trees = seq(from = 100, to = 10000, by = 100)
+#  
+#  tpredmat = predict(boost.listing, newdata = df_imp[train, ], n.trees = n.trees)
 #  predmat = predict(boost.listing, newdata = df_imp[-train, ], n.trees = n.trees)
 #    #Inspecting the relative influence.
-#    
-#    par(mfrow = c(1, 1))
+#   
+#    par(mfrow = c(1, 2))
 #    berr = with(df_imp[-train, ], apply(abs((predmat - rental_income)), 2, mean))
 #    plot(n.trees, berr, pch = 16,
 #         ylab = "Mean Absolute Error",
 #         xlab = "# Trees",
 #         main = "Boosting Test Error")
+# 
+#    #par(mfrow = c(1, 1))
+#    tberr = with(df_imp[train, ], apply(abs((tpredmat - rental_income)), 2, mean))
+#    plot(n.trees, tberr, pch = 16,
+#         ylab = "Mean Absolute Error",
+#         xlab = "# Trees",
+#         main = "Boosting Train Error")
 #    
-#  ###Support Vector Machine   
-#   library(e1071)
-# 
-#   #Fitting a maximal margin classifier to the training data.
-#   svm.mmc.linear = svm(rental_income~., #Familiar model fitting notation.
-#                        data = df_imp, #Using the linearly separable data.
-#                        subset = train, #Using the training data.
-#                        kernel = "linear", #Using a linear kernel.
-#                        cost = 1e6,#A very large cost; default is 1.
-#                        type = "eps",
-#                        scale = FALSE)
-#   yhat.svm.mmc.linear = predict(svm.mmc.linear, newdata = df_imp[test, ])
-#   summary(svm.mmc.linear)
-#   mean(abs(yhat.svm.mmc.linear - df_imp$rental_income[test]))
-# 
-#   svm.mmc.radial = svm(rental_income~., #Familiar model fitting notation.
-#                        data = df_imp, #Using the linearly separable data.
-#                        subset = train, #Using the training data.
-#                        kernel = "radial", #Using a linear kernel.
-#                        cost = 1e6,#A very large cost; default is 1.
-#                        type = "eps",
-#                        scale = FALSE)
-#   yhat.svm.mmc.radial = predict(svm.mmc.radial, newdata = df_imp[test, ])
-#   summary(svm.mmc.radial)
-#   mean(abs(yhat.svm.mmc.radial - df_imp$rental_income[test]))
+#    
+# #  ###Support Vector Machine
+#    library(e1071)
+# # 
+# #   #Fitting a maximal margin classifier to the training data.
+# #   svm.mmc.linear = svm(rental_income~., #Familiar model fitting notation.
+# #                        data = df_imp, #Using the linearly separable data.
+# #                        subset = train, #Using the training data.
+# #                        kernel = "linear", #Using a linear kernel.
+# #                        cost = 1e6,#A very large cost; default is 1.
+# #                        type = "eps",
+# #                        scale = FALSE)
+# #   yhat.svm.mmc.linear = predict(svm.mmc.linear, newdata = df_imp[test, ])
+# #   summary(svm.mmc.linear)
+# #   mean(abs(yhat.svm.mmc.linear - df_imp$rental_income[test]))
+# # 
+#    svm.mmc.radial = svm(rental_income~., #Familiar model fitting notation.
+#                         data = df_imp, #Using the linearly separable data.
+#                         subset = train, #Using the training data.
+#                         kernel = "radial", #Using a linear kernel.
+#                         cost = 1e6,#A very large cost; default is 1.
+#                         type = "eps",
+#                         scale = FALSE)
+#    yhat.svm.mmc.radial = predict(svm.mmc.radial, newdata = df_imp[test, ])
+#    summary(svm.mmc.radial)
+#    mean(abs(yhat.svm.mmc.radial - df_imp$rental_income[test]))
 # 
 #   cv.svm = tune(svm,
 #                             rental_income ~ .,
@@ -412,51 +430,61 @@ df_logistics%>%cor()
 #    plot(nn)
 #    
 #   #   ###Model Stack
-#   library(h2o)
-#   h2o.init(max_mem_size = "5g")
-#   n.h2o <- colnames(mat_dum) 
-#   colnames(mat_dum) = gsub(" ", ".", n.h2o)
-#   n <- colnames(mat_dum)
-#   colnames(mat_dum) = gsub("'", "", n.h2o)
-#   mat_dum_h2o = as.h2o(mat_dum)
-#   y_names = "y"
-#   X_names = setdiff(names(mat_dum_h2o), y)
-#   list_split <- h2o.splitFrame(data = mat_dum_h2o, ratios = 0.8, seed = 0)
-#   h2o.train <- list_split[[1]]
-#   h2o.valid <- list_split[[2]]
-#   
-#   # Train & cross-validate a lasso model
-#   best_lasso <- h2o.glm(
-#     x = X_names, y = y_names, training_frame = h2o.train, alpha = 1,
-#     remove_collinear_columns = TRUE, nfolds = 10, lambda = 40.37017, 
-#     stopping_metric = "MAE", fold_assignment = "Modulo",
-#     keep_cross_validation_predictions = TRUE, seed = 0, standardize = TRUE
-#   )
-#   results.lasso.train = h2o.performance(best_lasso, newdata = h2o.train)
-#   results.lasso.valid = h2o.performance(best_lasso, newdata = h2o.valid)
-#   
-#   # Train & cross-validate a RF model
-#   best_rf <- h2o.randomForest(
-#     x = X_names, y = y_names, training_frame = h2o.train, ntrees = 500, 
-#     max_depth = 0, min_rows = 1, nfolds = 10,
-#     fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
-#     seed = 0, stopping_rounds = 50, stopping_metric = "MAE",
-#     stopping_tolerance = 0
-#   )
-#   results.rf.train = h2o.performance(best_rf, newdata = h2o.train)
-#   results.rf.valid = h2o.performance(best_rf, newdata = h2o.valid)
-#   
-#   # Train & cross-validate a GBM model
-#   best_gbm <- h2o.gbm(
-#     x = X_names, y = y_names, training_frame = h2o.train, ntrees = 100, learn_rate = 0.01,
-#     max_depth = 0, min_rows = 1, nfolds = 10,
-#     fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
-#     seed = 0, stopping_rounds = 50, stopping_metric = "MAE",
-#     stopping_tolerance = 0
-#   )
-#   results.gbm.train = h2o.performance(best_gbm, newdata = h2o.train)
-#   results.gbm.valid = h2o.performance(best_gbm, newdata = h2o.valid)
-#   
+#    library(h2o)
+#    h2o.init(max_mem_size = "5g")
+#    n.h2o <- colnames(mat_dum) 
+#    colnames(mat_dum) = gsub(" ", ".", n.h2o)
+#    n <- colnames(mat_dum)
+#    colnames(mat_dum) = gsub("'", "", n.h2o)
+#    mat_dum_h2o = as.h2o(mat_dum)
+#    y_names = "y"
+#    X_names = setdiff(names(mat_dum_h2o), y)
+#    list_split <- h2o.splitFrame(data = mat_dum_h2o, ratios = 0.8, seed = 0)
+#    h2o.train <- list_split[[1]]
+#    h2o.valid <- list_split[[2]]
+# #   
+# #   # Train & cross-validate a lasso model
+#    best_lasso <- h2o.glm(
+#      x = X_names, y = y_names, training_frame = h2o.train, alpha = 1,
+#      remove_collinear_columns = TRUE, nfolds = 10, lambda = 21.37017, 
+#      stopping_metric = "MAE", fold_assignment = "Modulo",
+#      keep_cross_validation_predictions = TRUE, seed = 0, standardize = TRUE
+#    )
+#    results.lasso.train = h2o.performance(best_lasso, newdata = h2o.train)
+#    results.lasso.valid = h2o.performance(best_lasso, newdata = h2o.valid)
+# 
+#    best_ridge <- h2o.glm(
+#      x = X_names, y = y_names, training_frame = h2o.train, alpha = 0,
+#      remove_collinear_columns = TRUE, nfolds = 10, lambda = 756, 
+#      stopping_metric = "MAE", fold_assignment = "Modulo",
+#      keep_cross_validation_predictions = TRUE, seed = 0, standardize = TRUE
+#    )
+#    results.ridge.train = h2o.performance(best_ridge, newdata = h2o.train)
+#    results.ridge.valid = h2o.performance(best_ridge, newdata = h2o.valid)
+#       
+#    # Train & cross-validate a RF model
+#    best_rf <- h2o.randomForest(
+#      x = X_names, y = y_names, training_frame = h2o.train, 
+#      validation_frame = h2o.valid, ntrees = 500, 
+#      max_depth = 0, min_rows = 1, nfolds = 10,
+#      fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
+#      seed = 0, stopping_rounds = 50, stopping_metric = "MAE",
+#      stopping_tolerance = 0
+#    )
+#    results.rf.train = h2o.performance(best_rf, newdata = h2o.train)
+#    results.rf.valid = h2o.performance(best_rf, newdata = h2o.valid)
+#    
+#    # Train & cross-validate a GBM model
+#    best_gbm <- h2o.gbm(
+#      x = X_names, y = y_names, training_frame = h2o.train, ntrees = 200, learn_rate = 0.01,
+#      max_depth = 0, min_rows = 1, nfolds = 10,
+#      fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
+#      seed = 0, stopping_rounds = 50, stopping_metric = "MAE",
+#      stopping_tolerance = 0
+#    )
+#    results.gbm.train = h2o.performance(best_gbm, newdata = h2o.train)
+#    results.gbm.valid = h2o.performance(best_gbm, newdata = h2o.valid)
+# #   
 #   #   
 #   #   # Train & cross-validate an XGBoost model
 #   #   best_xgb <- h2o.xgboost(
@@ -467,14 +495,15 @@ df_logistics%>%cor()
 #   #     stopping_metric = "RMSE", stopping_tolerance = 0
 #   #   )
 #   #   
-#   ensemble_tree <- h2o.stackedEnsemble(
-#     x = X_names, y = y_names, training_frame = h2o.train, model_id = "my_tree_ensemble",
-#     base_models = list(best_lasso, best_rf, best_gbm),
-#     metalearner_algorithm = "drf"
-#   )   
-#   results.train = h2o.performance(ensemble_tree, newdata = h2o.train)
-#   results.valid = h2o.performance(ensemble_tree, newdata = h2o.valid)
-#   results.yhat = h2o.predict(ensemble_tree, newdata = h2o.train)
+   # ensemble_tree <- h2o.stackedEnsemble(
+   #   x = X_names, y = y_names, training_frame = h2o.train, model_id = "my_tree_ensemble",
+   #   base_models = list(best_lasso, best_ridge, best_gbm, best_rf),
+   #   metalearner_algorithm = "drf"
+   # )   
+   # results.train = h2o.performance(ensemble_tree, newdata = h2o.train)
+   # results.valid = h2o.performance(ensemble_tree, newdata = h2o.valid)
+   # results.yhat = h2o.predict(ensemble_tree, newdata = h2o.train)
+   # h2o.partialPlot(object = ensemble_tree, data = h2o.valid, cols="Dishwasher")
 #   
 #   
 #   h2o.partialPlot(object = ensemble_tree, data = mat_dum_h2o, cols = c("bedrooms",
@@ -495,8 +524,8 @@ df_logistics%>%cor()
 #   
 #   
 #   #Can visualize a variable importance plot.
-#   importance(rf.listing)
-   varImpPlot(rf.listing500)
+     importance(rf.listing500)
+     varImpPlot(rf.listing500)
 #   df_tree_imp = data.frame(importance(rf.listing))
 #   df_tree_imp = df_tree_imp %>%arrange(desc(X.IncMSE))
 #   
