@@ -6,6 +6,9 @@ detailed_listings_post = read.csv("l2_detailed_listings.csv", stringsAsFactors =
 #df_amenities = read.csv("amenities.csv", stringsAsFactors = TRUE, header = TRUE,fileEncoding = 'UTF-8-BOM')
 df_amenities_pre = read.csv("l0_amenities.csv", stringsAsFactors = TRUE, header = TRUE, fileEncoding = 'UTF-8-BOM')
 df_amenities = read.csv("l1_amenities.csv", stringsAsFactors = TRUE, header = TRUE, fileEncoding = 'UTF-8-BOM')
+df_train = read.csv("train.csv", stringsAsFactors = TRUE, header = FALSE, fileEncoding = 'UTF-8-BOM')
+#train = df_train$V1
+train = seq(1, nrow(detailed_listings_post) * .8,1)
 library(dplyr)
 library(ggplot2)
 library(corrplot)
@@ -27,17 +30,57 @@ if( "created_at" %in% colnames(detailed_listings_post)){
     filter(created_at < "2020-09-06 07:03:27 UTC")
 }
 if( "user_id" %in% colnames(df_comb)){
-  df_comb$user_id = factor(df_comb$user_id)
-  df_comb$user_id = NULL}
+  df_comb$user_id = factor(df_comb$user_id)}
 if( "zipcode" %in% colnames(df_comb)){
   df_comb$zipcode = factor(df_comb$zipcode)}
 if( "neighborhood" %in% colnames(df_comb)){
   df_comb$neighborhood = factor(df_comb$neighborhood)}
 
+#####################
+##Split and Dummify##
+#####################
+library(proxy)
+library(caret)
+df_imp = df_comb %>%
+  select(rental_income, everything()) %>% filter(level ==2)#%>%
+df_imp$level = NULL
+df_imp$zipcode = NULL
+df_imp$bed_type_category = NULL
+
+X <- model.matrix(rental_income ~.,
+                  data = df_imp)[,-1]
+
+y = df_imp$rental_income
+mat_dum = cbind(X,y)
+maxs <- apply(mat_dum, 2, max)  
+mins <- apply(mat_dum, 2, min)
+mat_dum_sca = scale(mat_dum,  
+                    center = mins, 
+                    scale = maxs - mins)
+set.seed(0)
+#train = sample(1:nrow(df_imp), 7*nrow(df_imp)/10)
+test = (-train)
+y.test = y[test]
+X.train = X[train,]
+X.test = X[test,]
+
+df_imp_ri = df_imp
+df_imp_ri$rental_income = NULL
+X_ri <- model.matrix(occupancy ~.,
+                     data = df_imp_ri)[,-1]
+y_ri = df_imp_ri$occupancy
+test = (-train)
+y.test_ri = y_ri[test]
+X.train_ri = X_ri[train,]
+X.test_ri = X_ri[test,]
+
+
+
 #######################
 ##Feature Engineering##
 #######################
- 
+
+
 df_comb$fh_weekend_price = df_comb$listing_weekend_price_native + df_comb$price_for_extra_person_native * (df_comb$person_capacity - df_comb$guests_included)
 
 ###Creating feature ammenity_count to represent the number of ammenities in each listing
@@ -55,6 +98,50 @@ df_comb$rooms = df_comb$bedrooms + df_comb$bathrooms
 ###of a randomly selected night
  
 df_comb$avg_price = (df_comb$price * 5 + df_comb$listing_weekend_price_native * 2)/7
+
+###creating 
+###Linear Model
+library(car)
+model.crazy = lm(rental_income ~ .,
+                   data = df_imp[train,])
+plot(model.crazy)
+summary(model.crazy)
+
+
+model.crazy.log = lm(log(rental_income) ~ .,
+                 data = df_imp[train,])
+plot(model.crazy.log)
+summary(model.crazy.log)
+
+bc = boxCox(model.crazy)
+lambda = bc$x[which(bc$y == max(bc$y))]
+
+rental_income.bc = (df_imp$rental_income^lambda - 1)/lambda
+df_imp_bc = df_imp
+df_imp_bc$rental_income = rental_income.bc
+model.crazy.bc = lm(rental_income ~ .,
+                 data = df_imp_bc[train,])
+
+
+summary(model.crazy.bc)
+plot(model.crazy.bc)
+
+
+###Recursive Feature elimination
+library(caret)
+  ctrl =  rfeControl(functions = lmFuncs,
+                   method = "repeatedcv",
+                   repeats = 5,
+                   verbose = FALSE)
+  subsets <- c(1:5, 10, 15, 25)
+
+  rfe(rental_income ~ .,
+      data = df_imp_bc[train,],
+      sizes = 5,
+      rfeControl = ctrl)
+  options(error=recover)
+
+
 
 ###Creating accesibility score
 df_access = df_amenities[c("Accessible.height.bed" ,"Accessible.height.toilet",
@@ -118,19 +205,7 @@ df_outdoor=df_amenities[c("BBQ.grill", "Patio.or.balcony", "Garden.or.backyard")
 df_logistics = df_amenities[c(34,98,99)]
 df_logistics%>%cor()
 
-###creating 
- ###Limited Linear Model
-# df_lm = filter(df_comb, level ==2)
-# df_lm$AccessibilityScore = df_access$AccessibilityScore
-# df_lm$ChildScre = df_child$ChildScore
-#  model.limited = lm(rental_income ~ rooms +
-#                      fh_weekend_price+
-#                      occupancy +
-#                      guests_included+
-#                      AccessibilityScore+
-#                      cleaning_fee_native,
-#                    data = df_lm[train,]
-#                      )
+ 
                 
 #some outliers 1471,1478, 1476, 178
 
@@ -138,15 +213,15 @@ df_logistics%>%cor()
 # plot(model.limited)
 # 
  ###Engineering Location Variable
-# library(class)
-# library(caret)
-# df_loc = data.frame(filter(df_comb, level == 2)$neighborhood)
-# df_loc$city = filter(df_comb, level == 2)$city
-# df_loc$zipcode = as.factor( filter(df_comb, level == 2)$zipcode)
-# df_loc$lat = filter(df_comb, level == 2)$lat
-# df_loc$lng = filter(df_comb, level == 2)$lng
-# df_loc$rooms = filter(df_comb, level == 2)$rooms
-# colnames(df_loc) = c("neighborhood", "city", "zipcode", "rooms")
+ library(class)
+
+ df_loc = data.frame(filter(df_comb, level == 2)$neighborhood)
+ df_loc$city = filter(df_comb, level == 2)$city
+ df_loc$zipcode = as.factor( filter(df_comb, level == 2)$zipcode)
+ df_loc$lat = filter(df_comb, level == 2)$lat
+ df_loc$lng = filter(df_comb, level == 2)$lng
+ df_loc$rooms = filter(df_comb, level == 2)$rooms
+ colnames(df_loc) = c("neighborhood", "city", "zipcode", "rooms")
 #
 #
 # dummies <- dummyVars(rooms~., data = df_loc)
@@ -159,35 +234,9 @@ df_logistics%>%cor()
 # max = max(df_loc$probs)
 # nrow(subset(df_loc,probs != max))
 
-#####################
-##Split and Dummify##
-#####################
-   # library(proxy)
-   # library(caret)
-   #   df_imp = df_comb %>%
-   #      select(rental_income, everything()) %>% filter(level ==2)#%>%
-   #   df_imp = df_imp%>% filter(bedrooms<5)
-   #   df_imp = df_imp%>%filter(rental_income != 0)
-   #   df_imp = df_imp%>%filter(rental_income < 10000)
-   #   df_imp = df_imp[complete.cases(df_imp),]
-   #   df_imp$level = NULL
-   #   X <- model.matrix(rental_income ~.,
-   #                     data = df_imp)[,-1]
-   #  
-   #  y = df_imp$rental_income
-   #  mat_dum = cbind(X,y)
-   #  maxs <- apply(mat_dum, 2, max)  
-   #  mins <- apply(mat_dum, 2, min)
-   #  mat_dum_sca = scale(mat_dum,  
-   #                center = mins, 
-   #                scale = maxs - mins)
-   # set.seed(0)
-   # train = sample(1:nrow(df_imp), 8*nrow(df_imp)/10)
-   # test = (-train)
-   # y.test = y[test]
-   # X.train = X[train,]
-   # X.test = X[test,]
-   # 
+
+
+    
    # 
    
 # #  #DisSamp = maxDissim(a = X.test, b = X.train, n = nrow(X)/10)
@@ -196,26 +245,26 @@ df_logistics%>%cor()
 # ##########
 # ##Models##
 # ##########
-#   
- #Running ElasticNet 10-fold cross validation.
-  #  rsq <- function(x, y) summary(lm(y~x))$r.squared
-  #  grid = 10^seq(5, -2, length = 100)
-  #  agrid = seq(from = 0,
-  #              to = 1,
-  #              by = .1) 
-  #   set.seed(0)
-  #  lasso.models = glmnet(X[train, ],y[train], alpha = 1, lambda = grid)
-  # cv.lasso.out = cv.glmnet(X[train, ], y[train],type.measure = "mae",
-  #                         lambda = grid, alpha = 1, nfolds = 10)
-  # plot(cv.lasso.out, main = "Lasso Regression\n")
-  # bestlambda.lasso = cv.lasso.out$lambda.min
-  # 
-  # lasso.best.yhat = predict(lasso.models, s = bestlambda.lasso, newx = X[test, ])
-  # lasso.best.train.yhat = predict(lasso.models, s = bestlambda.lasso, newx = X[train, ])
-  # lasso.r2.train = sum((y[train] - lasso.best.train.yhat)^2)/sum((y[train]-mean(y[train]))^2)
-  # lasso.r2.test = sum((y[test] - lasso.best.yhat)^2)/ sum((y.test-mean(y.test))^2)
-  # plot(y.test,lasso.best.yhat)
-  # abline(0,1)
+
+#Running ElasticNet 10-fold cross validation.
+# rsq <- function(x, y) summary(lm(y~x))$r.squared
+# grid = 10^seq(5, -2, length = 100)
+# agrid = seq(from = 0,
+#             to = 1,
+#             by = .1)
+#  set.seed(0)
+lasso.models = glmnet(X[train, ],y[train], alpha = 1, lambda = grid)
+cv.lasso.out = cv.glmnet(X[train, ], y[train],type.measure = "mae",
+                        lambda = grid, alpha = 1, nfolds = 10)
+plot(cv.lasso.out, main = "Lasso Regression\n")
+bestlambda.lasso = cv.lasso.out$lambda.min
+
+lasso.best.yhat = predict(lasso.models, s = bestlambda.lasso, newx = X[test, ])
+lasso.best.train.yhat = predict(lasso.models, s = bestlambda.lasso, newx = X[train, ])
+lasso.r2.train = sum((y[train] - lasso.best.train.yhat)^2)/sum((y[train]-mean(y[train]))^2)
+lasso.r2.test = sum((y[test] - lasso.best.yhat)^2)/ sum((y.test-mean(y.test))^2)
+plot(y.test,lasso.best.yhat)
+abline(0,1)
   # 
   # lasso.mae.train = mean(abs(lasso.best.train.yhat-y[train]))
   # lasso.mae.test = mean(abs(lasso.best.yhat-y.test))
@@ -236,35 +285,23 @@ df_logistics%>%cor()
   # ridge.mae.train = mean(abs(ridge.best.train.yhat-y[train]))
   # ridge.mae.test = mean(abs(ridge.best.yhat-y.test))
 
-# #  ###Recursive Feature elimination
-# # #
-# # #  ctrl =  rfeControl(functions = lmFuncs,
-# # #                   method = "repeatedcv",
-# # #                   repeats = 5,
-# # #                   verbose = FALSE)
-# # #  subsets <- c(1:5, 10, 15, 25)
-# # #
-# # #  rfe(x = x, y = y,
-# # #      sizes = 5,
-# # #      rfeControl = ctrl)
-# # #  options(error=recover)
-# #
+
 # #  ###Random Forest
 #    library(randomForest)
 # #
-#    #Fitting an initial random forest to the training subset.
-#    set.seed(0)
-#    rf.listing500 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 100                           )
-#    rf.yhat500 = predict(rf.listing500, newdata = X[test, ])
-#    rf.train.yhat500 = predict(rf.listing500, newdata = X[train, ])
-#    plot(y.test,rf.yhat500)
-#    abline(0,1)
-# 
-#    rf.r2.500.train = sum((y[train] - rf.train.yhat500)^2)/sum((y[train]-mean(y[train]))^2)
-#    rf.r2.500.test = sum((y[test] - rf.yhat500)^2)/ sum((y.test-mean(y.test))^2)
-# 
-#    rf.mae500.train = mean(abs(rf.train.yhat500-y[train]))
-#    rf.mae500.test = mean(abs(rf.yhat500-y.test))
+    #Fitting an initial random forest to the training subset.
+    # set.seed(0)
+    # rf.listing500 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 100                           )
+    # rf.yhat500 = predict(rf.listing500, newdata = X[test, ])
+    # rf.train.yhat500 = predict(rf.listing500, newdata = X[train, ])
+    # plot(y.test,rf.yhat500)
+    # abline(0,1)
+    # 
+    # rf.r2.500.train = sum((y[train] - rf.train.yhat500)^2)/sum((y[train]-mean(y[train]))^2)
+    # rf.r2.500.test = sum((y[test] - rf.yhat500)^2)/ sum((y.test-mean(y.test))^2)
+    # 
+    # rf.mae500.train = mean(abs(rf.train.yhat500-y[train]))
+    # rf.mae500.test = mean(abs(rf.yhat500-y.test))
 # 
 # rf.listing1000 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 1000                           )
 # rf.yhat1000 = predict(rf.listing1000, newdata = X[test, ])
@@ -354,19 +391,19 @@ df_logistics%>%cor()
 #  predmat = predict(boost.listing, newdata = df_imp[-train, ], n.trees = n.trees)
 #    #Inspecting the relative influence.
 #   
-#    par(mfrow = c(1, 2))
-#    berr = with(df_imp[-train, ], apply(abs((predmat - rental_income)), 2, mean))
-#    plot(n.trees, berr, pch = 16,
-#         ylab = "Mean Absolute Error",
-#         xlab = "# Trees",
-#         main = "Boosting Test Error")
-# 
-#    #par(mfrow = c(1, 1))
-#    tberr = with(df_imp[train, ], apply(abs((tpredmat - rental_income)), 2, mean))
-#    plot(n.trees, tberr, pch = 16,
-#         ylab = "Mean Absolute Error",
-#         xlab = "# Trees",
-#         main = "Boosting Train Error")
+    # par(mfrow = c(1, 2))
+    # berr = with(df_imp[-train, ], apply(abs((predmat - rental_income)), 2, mean))
+    # plot(n.trees, berr, pch = 16,
+    #      ylab = "Mean Absolute Error",
+    #      xlab = "# Trees",
+    #      main = "Boosting Test Error")
+    # 
+    # #par(mfrow = c(1, 1))
+    # tberr = with(df_imp[train, ], apply(abs((tpredmat - rental_income)), 2, mean))
+    # plot(n.trees, tberr, pch = 16,
+    #      ylab = "Mean Absolute Error",
+    #      xlab = "# Trees",
+    #      main = "Boosting Train Error")
 #    
 #    
 # #  ###Support Vector Machine
@@ -429,83 +466,104 @@ df_logistics%>%cor()
 #    # Plot the neural network 
 #    plot(nn)
 #    
-#   #   ###Model Stack
-#    library(h2o)
-#    h2o.init(max_mem_size = "5g")
-#    n.h2o <- colnames(mat_dum) 
-#    colnames(mat_dum) = gsub(" ", ".", n.h2o)
-#    n <- colnames(mat_dum)
-#    colnames(mat_dum) = gsub("'", "", n.h2o)
-#    mat_dum_h2o = as.h2o(mat_dum)
-#    y_names = "y"
-#    X_names = setdiff(names(mat_dum_h2o), y)
-#    list_split <- h2o.splitFrame(data = mat_dum_h2o, ratios = 0.8, seed = 0)
-#    h2o.train <- list_split[[1]]
-#    h2o.valid <- list_split[[2]]
-# #   
-# #   # Train & cross-validate a lasso model
-#    best_lasso <- h2o.glm(
-#      x = X_names, y = y_names, training_frame = h2o.train, alpha = 1,
-#      remove_collinear_columns = TRUE, nfolds = 10, lambda = 21.37017, 
-#      stopping_metric = "MAE", fold_assignment = "Modulo",
-#      keep_cross_validation_predictions = TRUE, seed = 0, standardize = TRUE
-#    )
-#    results.lasso.train = h2o.performance(best_lasso, newdata = h2o.train)
-#    results.lasso.valid = h2o.performance(best_lasso, newdata = h2o.valid)
-# 
-#    best_ridge <- h2o.glm(
-#      x = X_names, y = y_names, training_frame = h2o.train, alpha = 0,
-#      remove_collinear_columns = TRUE, nfolds = 10, lambda = 756, 
-#      stopping_metric = "MAE", fold_assignment = "Modulo",
-#      keep_cross_validation_predictions = TRUE, seed = 0, standardize = TRUE
-#    )
-#    results.ridge.train = h2o.performance(best_ridge, newdata = h2o.train)
-#    results.ridge.valid = h2o.performance(best_ridge, newdata = h2o.valid)
-#       
-#    # Train & cross-validate a RF model
-#    best_rf <- h2o.randomForest(
-#      x = X_names, y = y_names, training_frame = h2o.train, 
-#      validation_frame = h2o.valid, ntrees = 500, 
-#      max_depth = 0, min_rows = 1, nfolds = 10,
-#      fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
-#      seed = 0, stopping_rounds = 50, stopping_metric = "MAE",
-#      stopping_tolerance = 0
-#    )
-#    results.rf.train = h2o.performance(best_rf, newdata = h2o.train)
-#    results.rf.valid = h2o.performance(best_rf, newdata = h2o.valid)
-#    
-#    # Train & cross-validate a GBM model
-#    best_gbm <- h2o.gbm(
-#      x = X_names, y = y_names, training_frame = h2o.train, ntrees = 200, learn_rate = 0.01,
-#      max_depth = 0, min_rows = 1, nfolds = 10,
-#      fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
-#      seed = 0, stopping_rounds = 50, stopping_metric = "MAE",
-#      stopping_tolerance = 0
-#    )
-#    results.gbm.train = h2o.performance(best_gbm, newdata = h2o.train)
-#    results.gbm.valid = h2o.performance(best_gbm, newdata = h2o.valid)
-# #   
-#   #   
-#   #   # Train & cross-validate an XGBoost model
-#   #   best_xgb <- h2o.xgboost(
-#   #     x = X, y = Y, training_frame = train_h2o, ntrees = 5000, learn_rate = 0.05,
-#   #     max_depth = 3, min_rows = 3, sample_rate = 0.8, categorical_encoding = "Enum",
-#   #     nfolds = 10, fold_assignment = "Modulo", 
-#   #     keep_cross_validation_predictions = TRUE, seed = 0, stopping_rounds = 50,
-#   #     stopping_metric = "RMSE", stopping_tolerance = 0
-#   #   )
-#   #   
-   # ensemble_tree <- h2o.stackedEnsemble(
-   #   x = X_names, y = y_names, training_frame = h2o.train, model_id = "my_tree_ensemble",
-   #   base_models = list(best_lasso, best_ridge, best_gbm, best_rf),
-   #   metalearner_algorithm = "drf"
-   # )   
-   # results.train = h2o.performance(ensemble_tree, newdata = h2o.train)
-   # results.valid = h2o.performance(ensemble_tree, newdata = h2o.valid)
-   # results.yhat = h2o.predict(ensemble_tree, newdata = h2o.train)
-   # h2o.partialPlot(object = ensemble_tree, data = h2o.valid, cols="Dishwasher")
-#   
-#   
+      ###Model Stack
+    library(h2o)
+    h2o.init(max_mem_size = "5g")
+    n.h2o <- colnames(mat_dum)
+    colnames(mat_dum) = gsub(" ", ".", n.h2o)
+    n <- colnames(mat_dum)
+    colnames(mat_dum) = gsub("'", "", n.h2o)
+    mat_dum_h2o = as.h2o(mat_dum)
+    y_names = "y"
+    X_names = setdiff(names(mat_dum_h2o), y)
+    list_split <- h2o.splitFrame(data = mat_dum_h2o, ratios = 0.8, seed = 0)
+    h2o.train <- list_split[[1]]
+    h2o.valid <- list_split[[2]]
+#
+#   # Train & cross-validate a lasso model
+   best_lasso <- h2o.glm(
+     x = X_names, y = y_names, training_frame = h2o.train, alpha = 1,
+     remove_collinear_columns = TRUE, nfolds = 10, lambda = 21.37017,
+     stopping_metric = "MAE", fold_assignment = "Modulo",
+     keep_cross_validation_predictions = TRUE, seed = 0, standardize = TRUE
+   )
+   results.lasso.train = h2o.performance(best_lasso, newdata = h2o.train)
+   results.lasso.valid = h2o.performance(best_lasso, newdata = h2o.valid)
+
+   best_ridge <- h2o.glm(
+     x = X_names, y = y_names, training_frame = h2o.train, alpha = 0,
+     remove_collinear_columns = TRUE, nfolds = 10, lambda = 756,
+     stopping_metric = "MAE", fold_assignment = "Modulo",
+     keep_cross_validation_predictions = TRUE, seed = 0, standardize = TRUE
+   )
+   results.ridge.train = h2o.performance(best_ridge, newdata = h2o.train)
+   results.ridge.valid = h2o.performance(best_ridge, newdata = h2o.valid)
+
+   # Train & cross-validate a RF model
+   best_rf <- h2o.randomForest(
+     x = X_names, y = y_names, training_frame = h2o.train,
+     validation_frame = h2o.valid, ntrees = 500,
+     max_depth = 0, min_rows = 1, nfolds = 10,
+     fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
+     seed = 0, stopping_rounds = 50, stopping_metric = "MAE",
+     stopping_tolerance = 0
+   )
+   results.rf.train = h2o.performance(best_rf, newdata = h2o.train)
+   results.rf.valid = h2o.performance(best_rf, newdata = h2o.valid)
+
+   # Train & cross-validate a GBM model
+   best_gbm <- h2o.gbm(
+     x = X_names, y = y_names, training_frame = h2o.train, ntrees = 200, learn_rate = 0.01,
+     max_depth = 0, min_rows = 1, nfolds = 10,
+     fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
+     seed = 0, stopping_rounds = 50, stopping_metric = "MAE",
+     stopping_tolerance = 0
+   )
+   results.gbm.train = h2o.performance(best_gbm, newdata = h2o.train)
+   results.gbm.valid = h2o.performance(best_gbm, newdata = h2o.valid)
+#
+  #
+  #   # Train & cross-validate an XGBoost model
+  #   best_xgb <- h2o.xgboost(
+  #     x = X, y = Y, training_frame = train_h2o, ntrees = 5000, learn_rate = 0.05,
+  #     max_depth = 3, min_rows = 3, sample_rate = 0.8, categorical_encoding = "Enum",
+  #     nfolds = 10, fold_assignment = "Modulo",
+  #     keep_cross_validation_predictions = TRUE, seed = 0, stopping_rounds = 50,
+  #     stopping_metric = "RMSE", stopping_tolerance = 0
+  #   )
+  #
+ensemble_tree_drf <- h2o.stackedEnsemble(
+  x = X_names, y = y_names, training_frame = h2o.train, model_id = "my_tree_ensemble",
+  base_models = list(best_lasso, best_ridge, best_gbm, best_rf),
+  metalearner_algorithm = "drf"
+)
+results.train_drf = h2o.performance(ensemble_tree_drf, newdata = h2o.train)
+results.valid_drf = h2o.performance(ensemble_tree_drf, newdata = h2o.valid)
+
+ensemble_tree_beyes <- h2o.stackedEnsemble(
+  x = X_names, y = y_names, training_frame = h2o.train, model_id = "my_tree_ensemble",
+  base_models = list(best_lasso, best_ridge, best_gbm, best_rf),
+  metalearner_algorithm = "naivebayes"
+)
+results.train_beyes = h2o.performance(ensemble_tree_beyes, newdata = h2o.train)
+results.valid_beyes = h2o.performance(ensemble_tree_beyes, newdata = h2o.valid)
+
+ensemble_tree_auto <- h2o.stackedEnsemble(
+  x = X_names, y = y_names, training_frame = h2o.train, model_id = "my_tree_ensemble",
+  base_models = list(best_lasso, best_ridge, best_gbm, best_rf),
+  metalearner_algorithm = "auto"
+)
+results.train_auto = h2o.performance(ensemble_tree_auto, newdata = h2o.train)
+results.valid_auto = h2o.performance(ensemble_tree_auto, newdata = h2o.valid)
+
+
+ensemble_tree_gbm <- h2o.stackedEnsemble(
+  x = X_names, y = y_names, training_frame = h2o.train, model_id = "my_tree_ensemble",
+  base_models = list(best_lasso, best_ridge, best_gbm, best_rf),
+  metalearner_algorithm = "gbm"
+)
+results.train_auto = h2o.performance(ensemble_tree_gbm, newdata = h2o.train)
+results.valid_auto = h2o.performance(ensemble_tree_gbm, newdata = h2o.valid)
 #   h2o.partialPlot(object = ensemble_tree, data = mat_dum_h2o, cols = c("bedrooms",
 #                                                                        "y") )
 #   
@@ -524,8 +582,8 @@ df_logistics%>%cor()
 #   
 #   
 #   #Can visualize a variable importance plot.
-     importance(rf.listing500)
-     varImpPlot(rf.listing500)
+#      importance(rf.listing500)
+#      varImpPlot(rf.listing500)
 #   df_tree_imp = data.frame(importance(rf.listing))
 #   df_tree_imp = df_tree_imp %>%arrange(desc(X.IncMSE))
 #   
