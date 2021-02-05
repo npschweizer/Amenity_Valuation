@@ -1,14 +1,14 @@
 ###Run Me First
 setwd("~/Projects/Ammenity_Valuation")
-detailed_listings_pre = read.csv("l0_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE, fileEncoding = 'UTF-8-BOM')
+#detailed_listings_pre = read.csv("l0_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE, fileEncoding = 'UTF-8-BOM')
 detailed_listings = read.csv("l1_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE, fileEncoding = 'UTF-8-BOM')
 detailed_listings_post = read.csv("l2_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE, fileEncoding = 'UTF-8-BOM')
 #df_amenities = read.csv("amenities.csv", stringsAsFactors = TRUE, header = TRUE,fileEncoding = 'UTF-8-BOM')
 df_amenities_pre = read.csv("l0_amenities.csv", stringsAsFactors = TRUE, header = TRUE, fileEncoding = 'UTF-8-BOM')
 df_amenities = read.csv("l1_amenities.csv", stringsAsFactors = TRUE, header = TRUE, fileEncoding = 'UTF-8-BOM')
 df_train = read.csv("train.csv", stringsAsFactors = TRUE, header = FALSE, fileEncoding = 'UTF-8-BOM')
-#train = df_train$V1
-train = seq(1, nrow(detailed_listings_post) * .8,1)
+train = df_train$V1
+#train = seq(1, nrow(detailed_listings_post) * .8,1)
 library(dplyr)
 library(ggplot2)
 library(corrplot)
@@ -20,7 +20,8 @@ library(shiny)
 library(shinydashboard)
 detailed_listings$level = 1
 detailed_listings_post$level = 2
-df_comb = rbind(detailed_listings, detailed_listings_post)
+#df_comb = rbind(detailed_listings, detailed_listings_post)
+df_comb= detailed_listings_post
 #amnames = colnames(amenities_df)
 if( "updated_at" %in% colnames(df_comb)){
   df_comb$created_at = ymd_hms(df_comb$created_at)}
@@ -36,7 +37,7 @@ if( "zipcode" %in% colnames(df_comb)){
 if( "neighborhood" %in% colnames(df_comb)){
   df_comb$neighborhood = factor(df_comb$neighborhood)}
 
-#####################
+#####################0
 ##Split and Dummify##
 #####################
 library(proxy)
@@ -101,46 +102,46 @@ df_comb$avg_price = (df_comb$price * 5 + df_comb$listing_weekend_price_native * 
 
 ###creating 
 ###Linear Model
-library(car)
-model.crazy = lm(rental_income ~ .,
-                   data = df_imp[train,])
-plot(model.crazy)
-summary(model.crazy)
+# library(car)
+# model.crazy = lm(rental_income ~ .,
+#                    data = df_imp[train,])
+# plot(model.crazy)
+# summary(model.crazy)
+# 
+# 
+# model.crazy.log = lm(log(rental_income) ~ .,
+#                  data = df_imp[train,])
+# plot(model.crazy.log)
+# summary(model.crazy.log)
+# 
+# bc = boxCox(model.crazy)
+# lambda = bc$x[which(bc$y == max(bc$y))]
+# 
+# rental_income.bc = (df_imp$rental_income^lambda - 1)/lambda
+# df_imp_bc = df_imp
+# df_imp_bc$rental_income = rental_income.bc
+# model.crazy.bc = lm(rental_income ~ .,
+#                  data = df_imp_bc[train,])
+# 
+# 
+# summary(model.crazy.bc)
+# plot(model.crazy.bc)
+# 
 
-
-model.crazy.log = lm(log(rental_income) ~ .,
-                 data = df_imp[train,])
-plot(model.crazy.log)
-summary(model.crazy.log)
-
-bc = boxCox(model.crazy)
-lambda = bc$x[which(bc$y == max(bc$y))]
-
-rental_income.bc = (df_imp$rental_income^lambda - 1)/lambda
-df_imp_bc = df_imp
-df_imp_bc$rental_income = rental_income.bc
-model.crazy.bc = lm(rental_income ~ .,
-                 data = df_imp_bc[train,])
-
-
-summary(model.crazy.bc)
-plot(model.crazy.bc)
-
-
-###Recursive Feature elimination
-library(caret)
-  ctrl =  rfeControl(functions = lmFuncs,
-                   method = "repeatedcv",
-                   repeats = 5,
-                   verbose = FALSE)
-  subsets <- c(1:5, 10, 15, 25)
-
-  rfe(rental_income ~ .,
-      data = df_imp_bc[train,],
-      sizes = 5,
-      rfeControl = ctrl)
-  options(error=recover)
-
+# ###Recursive Feature elimination
+# library(caret)
+#   ctrl =  rfeControl(functions = lmFuncs,
+#                    method = "repeatedcv",
+#                    repeats = 5,
+#                    verbose = FALSE)
+#   subsets <- c(1:5, 10, 15, 25)
+# 
+#   rfe(rental_income ~ .,
+#       data = df_imp_bc[train,],
+#       sizes = 5,
+#       rfeControl = ctrl)
+#   options(error=recover)
+# 
 
 
 ###Creating accesibility score
