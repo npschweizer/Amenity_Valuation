@@ -85,7 +85,184 @@ sidebar_layout = html.Div(
 CARD_KEYS = ['retail', 'grocery', 'parks', 'transit', 'workplaces', 'residential']
 
 # the layout of the correlation page
-correlation_layout = html.Div(children=[
+predictor_layout = html.Div(children=[
+        predictor_layout = html.Div(children=[
+        dcc.Checklist(
+            id='amenity-checkbox',
+            options=
+                [{"label": amenity, "value": amenity} for amenity in df_ammenity.columns]
+            ,
+            value='Dishwasher'
+        ),
+        dcc.Dropdown(
+            id='neighborhood-dropdown',
+            options=
+                [{"label": neighborhood, "value": neighborhood} for neighborhood in df_ud.neighborhood.unique()]
+            ,
+            value='University City',
+            clearable=False,
+            style={"width": 100}
+        ),
+        dcc.Input(
+            id="price", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="bedrooms", 
+            type="number",
+            max=4,
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="beds", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="bathrooms", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="min_nights", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="person_capacity", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="reviews_count", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="picture_count", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="reviews_count", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="check_in_time", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="check_out_time", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="guests_included", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="security_deposit_native", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="star_rating", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="price_for_extra_person_native", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        
+
+        html.Hr(),
+        dbc.Row(
+            [
+                dbc.Col([], id=key+'_card') for key in CARD_KEYS
+            ],
+            className="mb-4",
+        ),
+
+        html.H3(
+            'Daily Confirmed Cases',
+            style={'text-align': 'center'}
+        ),
+        dcc.Graph(
+            id='line_chart',
+            style={
+                'width': '80%',
+                'height': '500px',
+                'text-align': 'center',
+                'margin': 'auto'
+            }
+        ),
+        html.H3(
+            'Percentage of Change in Mobility',
+            style={'text-align': 'center'}
+        ),
+        dcc.Graph(
+            id='trend_chart',
+            style={
+                'width': '80%',
+                'height': '500px',
+                'text-align': 'center',
+                'margin': 'auto'
+            }
+        ),
+])
+        dcc.Dropdown(
+            id='amenity-dropdown',
+            options=
+                [{"label": amenity, "value": amenity} for amenity in df_ammenity.columns]
+            ,
+            value='Dishwasher',
+            clearable=False,
+            style={"width": 100}
+        ),
+        html.Hr(),
+        dbc.Row(
+            [
+                dbc.Col([], id=key+'_card') for key in CARD_KEYS
+            ],
+            className="mb-4",
+        ),
+
+        html.H3(
+            'Daily Confirmed Cases',
+            style={'text-align': 'center'}
+        ),
+        dcc.Graph(
+            id='line_chart',
+            style={
+                'width': '80%',
+                'height': '500px',
+                'text-align': 'center',
+                'margin': 'auto'
+            }
+        ),
+        html.H3(
+            'Percentage of Change in Mobility',
+            style={'text-align': 'center'}
+        ),
+        dcc.Graph(
+            id='trend_chart',
+            style={
+                'width': '80%',
+                'height': '500px',
+                'text-align': 'center',
+                'margin': 'auto'
+            }
+        ),
+])
+
+
+predictor_layout = html.Div(children=[
         dcc.Dropdown(
             id='amenity-dropdown',
             options=

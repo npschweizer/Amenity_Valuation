@@ -14,6 +14,7 @@ df = pd.read_pickle("app.data")
 df_ammenity = pd.read_pickle("ammenity.data")
 stack= pickle.load(open(finalized_model_ri.sav, 'rb'))
 stackO= pickle.load(open(finalized_model_o.sav, 'rb'))
+df_ud = pd.read_csv("l2_detailed_listings.csv", encoding = "UTF-8")
 
 CARD_KEYS = ['retail', 'grocery', 'parks', 'transit', 'workplaces', 'residential']
 
