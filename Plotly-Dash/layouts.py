@@ -4,7 +4,7 @@ Define the layouts of each page/url
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
-from callbacks import df # import the df loaded from callbacks so we don't need to load it again
+from callbacks import df, df_ammenity, df_ud # import the df loaded from callbacks so we don't need to load it again
 
 # the layout of homepage
 homepage_layout = html.Div(
@@ -65,7 +65,7 @@ PAGES = [
 sidebar_layout = html.Div(
     [
         html.Div([
-                    dbc.Row([html.H4("NYCDSA"), 
+                    dbc.Row([html.H4("Amenity-Shmenity"), 
                             html.Img(src=('/assets/logo.jpeg'), width=50,
                                     style={"margin-left": "2rem"})
                             ])
@@ -82,11 +82,10 @@ sidebar_layout = html.Div(
     style=SIDEBAR_STYLE
 )
 
-CARD_KEYS = ['retail', 'grocery', 'parks', 'transit', 'workplaces', 'residential']
+CARD_KEYS = ['Rental Income', 'Occupancy']
 
 # the layout of the correlation page
 predictor_layout = html.Div(children=[
-        predictor_layout = html.Div(children=[
         dcc.Checklist(
             id='amenity-checkbox',
             options=
@@ -100,6 +99,33 @@ predictor_layout = html.Div(children=[
                 [{"label": neighborhood, "value": neighborhood} for neighborhood in df_ud.neighborhood.unique()]
             ,
             value='University City',
+            clearable=False,
+            style={"width": 100}
+        ),
+        dcc.Dropdown(
+            id='bookable-dropdown',
+            options=
+                [{"label":instant_book_enabled, "value": instant_book_enabled} for instant_book_enabled in df_ud.instant_book_enabled.unique()]
+            ,
+            value='True',
+            clearable=False,
+            style={"width": 100}
+        ),
+        dcc.Dropdown(
+            id='cancelation-dropdown',
+            options=
+                [{"label":cancellation_policy, "value": cancellation_policy} for cancellation_policy in df_ud.cancellation_policy.unique()]
+            ,
+            value='University City',
+            clearable=False,
+            style={"width": 100}
+        ),
+        dcc.Dropdown(
+            id='property-dropdown',
+            options=
+                [{"label":property_type, "value": property_type} for property_type in df_ud.property_type.unique()]
+            ,
+            value='House',
             clearable=False,
             style={"width": 100}
         ),
@@ -145,11 +171,6 @@ predictor_layout = html.Div(children=[
             debounce=True, placeholder="Debounce True"
         ),
         dcc.Input(
-            id="reviews_count", 
-            type="number",
-            debounce=True, placeholder="Debounce True"
-        ),
-        dcc.Input(
             id="check_in_time", 
             type="number",
             debounce=True, placeholder="Debounce True"
@@ -179,99 +200,27 @@ predictor_layout = html.Div(children=[
             type="number",
             debounce=True, placeholder="Debounce True"
         ),
-        
-
-        html.Hr(),
-        dbc.Row(
-            [
-                dbc.Col([], id=key+'_card') for key in CARD_KEYS
-            ],
-            className="mb-4",
+        dcc.Input(
+            id="cleaning_fee_native", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="listing_weekend_price_native", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="monthly_price_factor", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
+        ),
+        dcc.Input(
+            id="weekly_price_factor", 
+            type="number",
+            debounce=True, placeholder="Debounce True"
         ),
 
-        html.H3(
-            'Daily Confirmed Cases',
-            style={'text-align': 'center'}
-        ),
-        dcc.Graph(
-            id='line_chart',
-            style={
-                'width': '80%',
-                'height': '500px',
-                'text-align': 'center',
-                'margin': 'auto'
-            }
-        ),
-        html.H3(
-            'Percentage of Change in Mobility',
-            style={'text-align': 'center'}
-        ),
-        dcc.Graph(
-            id='trend_chart',
-            style={
-                'width': '80%',
-                'height': '500px',
-                'text-align': 'center',
-                'margin': 'auto'
-            }
-        ),
-])
-        dcc.Dropdown(
-            id='amenity-dropdown',
-            options=
-                [{"label": amenity, "value": amenity} for amenity in df_ammenity.columns]
-            ,
-            value='Dishwasher',
-            clearable=False,
-            style={"width": 100}
-        ),
-        html.Hr(),
-        dbc.Row(
-            [
-                dbc.Col([], id=key+'_card') for key in CARD_KEYS
-            ],
-            className="mb-4",
-        ),
-
-        html.H3(
-            'Daily Confirmed Cases',
-            style={'text-align': 'center'}
-        ),
-        dcc.Graph(
-            id='line_chart',
-            style={
-                'width': '80%',
-                'height': '500px',
-                'text-align': 'center',
-                'margin': 'auto'
-            }
-        ),
-        html.H3(
-            'Percentage of Change in Mobility',
-            style={'text-align': 'center'}
-        ),
-        dcc.Graph(
-            id='trend_chart',
-            style={
-                'width': '80%',
-                'height': '500px',
-                'text-align': 'center',
-                'margin': 'auto'
-            }
-        ),
-])
-
-
-predictor_layout = html.Div(children=[
-        dcc.Dropdown(
-            id='amenity-dropdown',
-            options=
-                [{"label": amenity, "value": amenity} for amenity in df_ammenity.columns]
-            ,
-            value='Dishwasher',
-            clearable=False,
-            style={"width": 100}
-        ),
         html.Hr(),
         dbc.Row(
             [
