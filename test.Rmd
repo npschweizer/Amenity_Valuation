@@ -50,6 +50,50 @@ if( "neighborhood" %in% colnames(df_comb)){
 df_comb$rooms = df_comb$bedrooms + df_comb$bathrooms
 ```
 
+# EDA
+The dataset began with 1497 observations of 283 features, many of which were irrelevant to the project or redundant.
+```{r data_shape, echo = FALSE}
+print("Column Names")
+colnames(detailed_listings_pre)
+
+```
+```{r distributions, echo FALSE}
+detailed_listings %>%ggplot(aes(x = rental_income)) + geom_histogram()
+```
+
+A number of amenities are available in nearly all properties.
+```{r frequent_amenities, echo = FALSE}
+totals = colSums(df_amenities_pre)
+totalnames = colnames(df_amenities_pre)
+df_amsums = data_frame(totalnames, totals)
+df_amsums = df_amsums%>% arrange(desc(totals))
+df_amsums%>%filter(totals> quantile(totals, .75) ) %>%
+  ggplot()+
+  geom_bar(aes(x = reorder(totalnames, desc(totals)), y = (totals/nrow(df_amsums))), stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ylab("Percentage of Listings w/ Amenity")+
+  xlab("Amenity")
+
+```
+
+While others were rarely offered, if ever.
+```{r infrequent_amenities, echo = FALSE}
+totals = colSums(df_amenities_pre)
+totalnames = colnames(df_amenities_pre)
+df_amsums = data_frame(totalnames, totals)
+df_amsums = df_amsums%>% arrange(desc(totals))
+df_amsums%>%filter(totals< quantile(totals, .25) ) %>%
+  ggplot()+
+  geom_bar(aes(x = reorder(totalnames, desc(totals)), y = (totals/nrow(df_amsums))), stat = "identity")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ylab("Percentage of Listings w/ Amenity") +
+  xlab("Amenity")
+
+```
+
+
+
+
 # Imputation Graphs
 After cleaning less than 1% of the dataset was null/NA. Missing values were imputed using KNN with euclidean distance used as a metric and 3-6 nearby features selected by correlation for each variable, or by imputing the median. Pre- and post-imputation distributions are available below.
 
@@ -150,53 +194,84 @@ Neighborhood was kept due to its substantial variance with response variables.
 summary(aov(rental_income ~ neighborhood , data = detailed_listings_post)) 
 summary(aov(price ~ neighborhood , data = detailed_listings_post)) 
 summary(aov(listing_weekend_price_native ~ neighborhood , data = detailed_listings_post)) 
+summary(aov(occupancy ~ occupancy , data = detailed_listings_post))
 
+summary(aov(rental_income ~ reviews_count , data = detailed_listings_post)) 
+summary(aov(price ~ reviews_count , data = detailed_listings_post)) 
+summary(aov(listing_weekend_price_native ~ reviews_count , data = detailed_listings_post))
+summary(aov(occupancy ~ reviews_count , data = detailed_listings_post))
+
+summary(aov(rental_income ~ instant_book_enabled , data = detailed_listings_post)) 
+summary(aov(price ~ instant_book_enabled , data = detailed_listings_post)) 
+summary(aov(listing_weekend_price_native ~ instant_book_enabled , data = detailed_listings_post))
+summary(aov(occupancy ~ instant_book_enabled , data = detailed_listings_post))
+
+
+summary(aov(rental_income ~ property_type , data = detailed_listings_post)) 
+summary(aov(price ~ property_type , data = detailed_listings_post)) 
+summary(aov(listing_weekend_price_native ~ property_type , data = detailed_listings_post))
+summary(aov(occupancy ~ property_type , data = detailed_listings_post))
+
+summary(aov(rental_income ~ picture_count , data = detailed_listings_post)) 
+summary(aov(price ~ picture_count , data = detailed_listings_post)) 
+summary(aov(listing_weekend_price_native ~ picture_count , data = detailed_listings_post))
+summary(aov(occupancy ~ picture_count , data = detailed_listings_post))
 
 ```
 
 #ANOVA Drops
-However, zipcode and city did not vary substantially with response variables,  respectively and so were dropped from subsequent modeling. 
+However, zipcode and city did not vary substantially with response variables, respectively and so were dropped from subsequent modeling. "is_location_exact", "description_locale", "require_guest_phone_verification", "instant_bookable" and "require_guest_phone_verification" were dropped for similar reasons.
 
 
 ```{r ANOVA_drops, echo = FALSE}
-summary(aov(rental_income ~ zipcode , data = detailed_listings_post)) 
-summary(aov(price ~ zipcode , data = detailed_listings_post)) 
-summary(aov(listing_weekend_price_native ~ zipcode , data = detailed_listings_post)) 
+#summary(aov(rental_income ~ zipcode , data = detailed_listings_post)) 
+#summary(aov(price ~ zipcode , data = detailed_listings_post)) 
+#summary(aov(listing_weekend_price_native ~ zipcode , data = detailed_listings_post)) 
 
-summary(aov(rental_income ~ city , data = detailed_listings_post)) 
-summary(aov(price ~ city , data = detailed_listings_post)) 
-summary(aov(listing_weekend_price_native ~ city , data = detailed_listings_post)) 
+#summary(aov(rental_income ~ city , data = detailed_listings_post)) 
+#summary(aov(price ~ city , data = detailed_listings_post)) 
+#summary(aov(listing_weekend_price_native ~ city , data = detailed_listings_post)) 
 
-```
+#summary(aov(rental_income ~ city , data = detailed_listings_post)) 
+#summary(aov(price ~ city , data = detailed_listings_post)) 
+#summary(aov(listing_weekend_price_native ~ city , data = detailed_listings_post))
 
-# EDA
-A number of amenities are available in nearly all properties.
-```{r frequent_amenities, echo = FALSE}
-totals = colSums(df_amenities_pre)
-totalnames = colnames(df_amenities_pre)
-df_amsums = data_frame(totalnames, totals)
-df_amsums = df_amsums%>% arrange(desc(totals))
-df_amsums%>%filter(totals> quantile(totals, .75) ) %>%
-  ggplot()+
-  geom_bar(aes(x = reorder(totalnames, desc(totals)), y = (totals/nrow(df_amsums))), stat = "identity") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-  ylab("Percentage of Listings w/ Amenity")+
-  xlab("Amenity")
+summary(aov(rental_income ~ bed_type_category , data = detailed_listings_post)) 
+summary(aov(price ~ bed_type_category , data = detailed_listings_post)) 
+summary(aov(listing_weekend_price_native ~ bed_type_category , data = detailed_listings_post))
+summary(aov(occupancy ~ bed_type_category , data = detailed_listings_post))
 
-```
 
-While others were rarely offered, if ever.
-```{r infrequent_amenities, echo = FALSE}
-totals = colSums(df_amenities_pre)
-totalnames = colnames(df_amenities_pre)
-df_amsums = data_frame(totalnames, totals)
-df_amsums = df_amsums%>% arrange(desc(totals))
-df_amsums%>%filter(totals< quantile(totals, .25) ) %>%
-  ggplot()+
-  geom_bar(aes(x = reorder(totalnames, desc(totals)), y = (totals/nrow(df_amsums))), stat = "identity")+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-  ylab("Percentage of Listings w/ Amenity") +
-  xlab("Amenity")
+summary(aov(rental_income ~ require_guest_phone_verification , data = detailed_listings_post)) 
+summary(aov(price ~ require_guest_phone_verification , data = detailed_listings_post)) 
+summary(aov(listing_weekend_price_native ~ require_guest_phone_verification , data = detailed_listings_post))
+summary(aov(occupancy ~ require_guest_phone_verification , data = detailed_listings_post))
+
+summary(aov(rental_income ~ is_location_exact , data = detailed_listings_post)) 
+summary(aov(price ~ is_location_exact , data = detailed_listings_post)) 
+summary(aov(listing_weekend_price_native ~ is_location_exact , data = detailed_listings_post))
+summary(aov(occupancy ~ is_location_exact , data = detailed_listings_post))
+
+summary(aov(rental_income ~ instant_bookable , data = detailed_listings_post)) 
+summary(aov(price ~ instant_bookable , data = detailed_listings_post))
+summary(aov(listing_weekend_price_native ~ instant_bookable , data = detailed_listings_post))
+summary(aov(occupancy ~ instant_bookable , data = detailed_listings_post))
+
+summary(aov(rental_income ~ require_guest_profile_picture , data = detailed_listings_post)) 
+summary(aov(price ~ require_guest_profile_picture , data = detailed_listings_post)) 
+summary(aov(listing_weekend_price_native ~ require_guest_profile_picture , data = detailed_listings_post))
+summary(aov(occupancy ~ require_guest_profile_picture , data = detailed_listings_post))
+
+summary(aov(rental_income ~ description_locale , data = detailed_listings_post)) 
+summary(aov(price ~ description_locale , data = detailed_listings_post)) 
+summary(aov(listing_weekend_price_native ~ description_locale , data = detailed_listings_post))
+summary(aov(occupancy ~ description_locale , data = detailed_listings_post))
+
+summary(aov(rental_income ~ locale , data = detailed_listings_post)) 
+summary(aov(price ~ locale , data = detailed_listings_post)) 
+summary(aov(listing_weekend_price_native ~ locale , data = detailed_listings_post))
+summary(aov(occupancy ~ locale , data = detailed_listings_post))
+
 
 ```
 
