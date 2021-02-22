@@ -4,30 +4,29 @@ Define the layouts of each page/url
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
-from callbacks import df, df_amenity, df_ud # import the df loaded from callbacks so we don't need to load it again
-
+from callbacks import df, df_amenity, df_ud, stack, stackO  # import the df loaded from callbacks so we don't need to load it again
+from alepython import ale_plot
+import pandas as pd
+pd.set_option('display.max_columns', None)
 # the layout of homepage
 homepage_layout = html.Div(
                 [
                     dbc.Row(
                         [
-                            dbc.Col(dcc.Markdown([
-                                "##### Mobility Types\n",
-                                "**Grocery & pharmacy**\n",
-                                "Mobility trends for places like grocery markets, food warehouses, \
-                                    farmers markets, specialty food shops, drug stores, and pharmacies.\n",
-                                "**Parks**\n",
-                                "Mobility trends for places like local parks, national parks, public beaches,\
-                                    marinas, dog parks, plazas, and public gardens.\n",
-                                "**Transit stations**\n",
-                                "Mobility trends for places like public transport hubs such as subway, bus, and train stations.\n",
-                                "**Retail & recreation**\n",
-                                "Mobility trends for places like restaurants, cafes, shopping centers, \
-                                    theme parks, museums, libraries, and movie theaters.\n",
-                                "**Residential**\n", "Mobility trends for places of residence.\n",
-                                "**Workplaces**\n", "Mobility trends for places of work."
-
-                            ])),
+                            dbc.Col([        
+                                html.H6(
+                                    'Amenities',
+                                        style={'text-align': 'center'}
+                                ),
+                                dcc.Dropdown(
+                                    id='amenity_checkbox-ale',
+                                    options=
+                                        [{"label": amenity, "value": amenity} for amenity in df_amenity.columns],
+                                    value='Dishwasher',
+                                    multi = True,
+                                    persistence = True,
+                                ),
+                            ]),
                             dbc.Col(dcc.Markdown([
                                 "##### Correlation Coefficients between Daily Cases and Mobility\n",
                                 "It is the number that describes how people reacted to the reported daily cases "\
@@ -39,7 +38,12 @@ homepage_layout = html.Div(
                                 "[New York Times COVID-19 Reports](https://github.com/nytimes/covid-19-data)"
                             ])),
                         ]
-                    )
+                    ),
+                    dbc.Row([
+                        dbc.Col(
+                            #ale_plot(model=stack,train_set= df.drop(["occupancy", "rental_income"], axis =1),features= 'listing_weekend_price_native',bins=20, monte_carlo=True)
+                            )]
+                        )
                 ]
 )
 
@@ -58,7 +62,7 @@ SIDEBAR_STYLE = {
 # save all the parameters of the pages for easy accessing
 PAGES = [
     {'children': 'Home', 'href': '/', 'id': 'home'},
-    {'children': 'Predictor', 'href': '/predictor', 'id': 'predictor-page'}
+    {'children': 'Predictor', 'href': '/predictor', 'id': 'predictor'}
 ]
 
 # the layout of the sidebar
@@ -82,8 +86,6 @@ sidebar_layout = html.Div(
     style=SIDEBAR_STYLE
 )
 
-CARD_KEYS = ['Rental Income', 'Occupancy']
-
 # the layout of the correlation page
 predictor_layout = html.Div(children=[
         html.H3(
@@ -95,7 +97,7 @@ predictor_layout = html.Div(children=[
             style={'text-align': 'center'}
         ),
         dcc.Dropdown(
-            id='amenity-checkbox',
+            id='amenity_checkbox',
             options=
                 [{"label": amenity, "value": amenity} for amenity in df_amenity.columns]
             ,
@@ -275,6 +277,7 @@ predictor_layout = html.Div(children=[
                 dcc.Input(
                     id="check_in_time", 
                     type="number",
+                    max=23.5,
                     debounce=True, placeholder="Debounce True"
                 ),
                 html.H6("Check Out Time",
@@ -283,6 +286,7 @@ predictor_layout = html.Div(children=[
                 dcc.Input(
                     id="check_out_time", 
                     type="number",
+                    max=23.5,
                     debounce=True, placeholder="Debounce True"
                 ),
                 html.H6("Star Rating",
@@ -293,14 +297,30 @@ predictor_layout = html.Div(children=[
                     type="number",
                     debounce=True, placeholder="Debounce True"
                 ),
+                html.Button(
+                    id='submit-button', 
+                    n_clicks=0, 
+                    children='Submit'),
             ]),
         ]),
         html.Hr(),
         dbc.Row(
             [
-                dbc.Col([], id='Rental Income')
+            dbc.Card(dbc.CardBody(
+                [
+                html.H5("Rental Income"),
+                html.P("Predicted Rental Income: "),
+                html.Div(id='Rental_Income')
+                ]
+            )),
+            dbc.Card(dbc.CardBody(
+                [
+                html.H5("Occupancy"),
+                html.P("Predicted Occupancy: "),
+                html.Div(id='Occupancy')
+                ]
+            )),
             ],
-            className="mb-4",
         ),
 ])
 

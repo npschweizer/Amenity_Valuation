@@ -8,41 +8,125 @@ import plotly.express as px
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 import pandas as pd
+import numpy as np
 import pickle
 from sklearn.inspection import plot_partial_dependence
 from mlxtend.regressor import StackingCVRegressor
+from alepython import ale_plot
+pd.set_option('display.max_columns', None)
 # Read the picked data frame from the project folder
 df = pd.read_pickle("app.data")
 df_amenity = pd.read_pickle("ammenity.data")
-print(df_amenity.columns)
+
 stack= pickle.load(open('finalized_model_ri.sav', 'rb'))
 stackO= pickle.load(open('finalized_model_o.sav', 'rb'))
 df_ud = pd.read_csv("l2_detailed_listings.csv", encoding = "UTF-8")
-
+#print('Hello world!')
 CARD_KEYS = ['Rental Income', 'Occupancy']
 Amenity_Names = df_amenity.columns.tolist()
-ALLOWED_TYPES = df_ud.columns.tolist()
+NUMERICAL_TYPES = df_ud.columns.tolist()
 for name in Amenity_Names:
-    print(name)
-    if name in ALLOWED_TYPES:
-        ALLOWED_TYPES.remove(name)
-ALLOWED_TYPES.remove("occupancy")
-ALLOWED_TYPES.remove("rental_income") 
-pred = pd.DataFrame(columns=ALLOWED_TYPES)
+    if name in NUMERICAL_TYPES:
+        NUMERICAL_TYPES.remove(name)
+NUMERICAL_TYPES.remove("occupancy")
+NUMERICAL_TYPES.remove("rental_income")
+NUMERICAL_TYPES.remove("neighborhood")
+NUMERICAL_TYPES.remove("Laptop friendly workspace")
+NUMERICAL_TYPES.remove("cancellation_policy")
+NUMERICAL_TYPES.remove("property_type")
+NUMERICAL_TYPES.remove("instant_book_enabled")
+
+#print(NUMERICAL_TYPES) 
+
 #Occupancy and Rental_Income Outputs
 @app.callback(
-    [Output('Rental Income', 'children')],
-    [Input("{}".format(_), "value") for _ in ALLOWED_TYPES])
-def update_card_value(id,value):
-    pred[1,id] = value
-    ri = stack.predict(pred)
-    return dbc.Card(dbc .CardBody(
-         [
-             html.H5(key.title(), className="card-title"),
-             html.P("Predicted Rental Income: " + str(ri), className="card-text",
-             ),
-         ]
-     ), color= "success")
+    Output('Rental_Income', 'children'),
+    [Input('amenity_checkbox', 'value')],
+    [Input('cancellation_policy', 'value')],
+    [Input('property_type', 'value')],
+    [Input('neighborhood', 'value')],
+#    [Input('instant_book_enabled', 'value')],
+    Input('submit-button', 'n_clicks'),
+    [Input("{}".format(_), 'value') for _ in NUMERICAL_TYPES])
+def update_card_value(amenity_checkbox,property_type,cancellation_policy, neighborhood, *vals):
+    pred = pd.DataFrame(np.zeros((1,len(df.columns.drop("occupancy")))),columns=df.drop("occupancy",axis=1).columns)
+    ri=np.median(df.rental_income)
+    for i in df_ud.cancellation_policy.unique():
+        if i in cancellation_policy:
+            pred[str('property_type__' + i)] = 1
+            #print(pred[str('property_type__' + i)])
+        else:
+            pred[str('property_type__' + i)] = 0
+            #print(pred[str('property_type__' + i)])
+    #for i in list(map(str,df_ud.instant_book_enabled.unique())):
+    #    if i in instant_book_enabled:
+    #        pred[str('instant_book_enabled__' + i)] = 1
+    #    else:
+    #        pred[str('instant_book_enabled__'+ i)] = 0
+    
+    for i in df_ud.property_type.unique():
+        if i in property_type:
+            pred[str('property_type__' + i)] = 1
+            #print(pred[str('property_type__' + i)])
+        else:
+            pred[str('property_type__' + i)] = 0
+            #print(pred[str('property_type__' + i)])
+    #print(df_ud.neighborhood.unique())
+    for i in df_ud.neighborhood.unique():
+        if i in neighborhood:
+            pred[str('neighborhood__' + i)] = 1
+            #print(pred[str('neighborhood__' + neighborhood)])
+        else:
+            pred[str('neighborhood__' + i)] = 0
+            #print(pred[str('neighborhood__' + neighborhood)])
+    for i in range(len(NUMERICAL_TYPES)):
+        #print(vals[i])
+        if vals[i] != "":
+            pred[NUMERICAL_TYPES[i]] = vals[i]
+    for i in df_amenity.columns:
+        if i in amenity_checkbox:
+            pred[i] = 1
+        else:
+            pred[i] = 0
+    print(pred)
+    pred.fillna(0, inplace=True)
+    #print(stack.predict(pred.iloc[0]))
+    #ri = stack.predict(pred.iloc[0])
+    return str(pred)
+
+@app.callback(
+    Output('Occupancy', 'children'),
+    [Input('amenity_checkbox', 'value')],
+    [Input('neighborhood', 'value')],
+    [Input("{}".format(_), 'value') for _ in NUMERICAL_TYPES])
+def update_card_value(amenity_checkbox, neighborhood, *vals):
+    pred = pd.DataFrame(columns=df.columns)
+    pred.append(pd.Series(), ignore_index=True)
+    oc=np.median(df.occupancy)
+    for i in df_ud.neighborhood.unique():
+        if i in neighborhood:
+            pred.at[0,str('neighborhood__' + neighborhood)] = 1
+        else:
+            pred.at[0,str('neighborhood__' + neighborhood)] = 0
+    for i in range(len(NUMERICAL_TYPES)):
+        pred.at[0,NUMERICAL_TYPES[i]] = vals[i]
+    for i in df_amenity.columns:
+        if i in amenity_checkbox:
+            pred.at[0,i] = 1
+        else:
+            pred.at[0,i] = 0
+    #print(stack.predict(pred.iloc[0]))
+    #ri = stack.predict(pred.iloc[0])
+    return str(oc)
+
+
+    # dbc.Card(dbc.CardBody(
+    #      [
+    #          html.H5("Rental Income"),
+    #          html.P("Predicted Rental Income: " + str(ri),
+    #          ),
+    #      ]
+    #  ), color= "success")
 
 # @app.callback(
 #     [Output('line_chart', 'figure'),
