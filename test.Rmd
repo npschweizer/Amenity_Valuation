@@ -15,9 +15,9 @@ _This project only contains data on listings for properties rented in their enti
 ###Run Me First
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
 setwd("~/Projects/Ammenity_Valuation")
-detailed_listings_pre = read.csv("l0_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
-detailed_listings = read.csv("l1_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
-detailed_listings_post = read.csv("l2_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
+df_l0 = read.csv("l0_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
+df_l1 = read.csv("l1_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
+df_l2 = read.csv("l2_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
 df_amenities_pre = read.csv("l0_amenities.csv", stringsAsFactors = TRUE, header = TRUE)
 df_amenities = read.csv("l1_amenities.csv", stringsAsFactors = TRUE, header = TRUE)
 library(dplyr)
@@ -30,24 +30,16 @@ library(glmnet)
 library(shiny)
 library(shinydashboard)
 library(naniar)
-detailed_listings$level = 1
-detailed_listings_post$level = 2
-df_comb = rbind(detailed_listings, detailed_listings_post)
-if( "updated_at" %in% colnames(df_comb)){
-  df_comb$created_at = ymd_hms(df_comb$created_at)}
-if( "created_at" %in% colnames(detailed_listings_post)){
-  df_comb$updated_at = ymd_hms(df_comb$created_at)  
-  df_comb = df_comb %>%
-    filter(created_at < "2020-09-06 07:03:27 UTC")
-}
-if( "user_id" %in% colnames(df_comb)){
-  df_comb$user_id = factor(df_comb$user_id)
-  df_comb$user_id = NULL}
-if( "zipcode" %in% colnames(df_comb)){
-  df_comb$zipcode = factor(df_comb$zipcode)}
-if( "neighborhood" %in% colnames(df_comb)){
-  df_comb$neighborhood = factor(df_comb$neighborhood)}
-df_comb$rooms = df_comb$bedrooms + df_comb$bathrooms
+if( "user_id" %in% colnames(df_l1)){
+  df_l1$user_id = factor(df_l1$user_id)
+  df_l1$user_id = NULL}
+if( "zipcode" %in% colnames(df_l1)){
+  df_l1$zipcode = factor(df_l1$zipcode)}
+if( "neighborhood" %in% colnames(df_l1)){
+  df_l1$neighborhood = factor(df_l1$neighborhood)}
+df_l1$rooms = df_l1$bedrooms + df_l1$bathrooms
+df_l0$created_at=as.Date(df_l0$created_at)
+df_l0$updated_at=as.Date(df_l0$updated_at)
 ```
 
 # EDA
@@ -57,9 +49,97 @@ print("Column Names")
 colnames(detailed_listings_pre)
 
 ```
+
+Price, rental income, and occupancy all appear to be normally distributed, with obvious outliers. AirBnb is a roomsharing platform for landowners so it may be reasonable to attribute the frequency of occupancy rates between 0 and 25% to owners who don't rent out their properties full-time. Median rental income for a Philadelphia Airbnb over this period was $1610, occupancy was 52%, and price was $104. By comparison, rentcafe.com suggests that mean rent for a single bedroom apartment in Philadelphia is $1660/month. 
 ```{r distributions, echo FALSE}
-detailed_listings %>%ggplot(aes(x = rental_income)) + geom_histogram()
+detailed_listings %>%ggplot(aes(x = rental_income)) + geom_histogram(binwidth = 100)
+detailed_listings %>%ggplot(aes(x = occupancy)) +geom_histogram()
+detailed_listings %>%ggplot(aes(x = price)) + geom_histogram(binwidth = 50)
+
+#median(detailed_listings$rental_income) #1610
+#median(detailed_listings$occupancy) #52
+#median(detailed_listings$price) #104
 ```
+
+Unsurprisingly, larger properties appear to earn more, although it's important to remember that more income != more profit.
+
+# Rooms and Rental Income
+```{r rooms, echo = FALSE}
+
+df_l1%>%
+  #filter(level == 2)%>%
+  group_by(bedrooms)%>%
+  summarise(Median_income = median(rental_income),
+            Standard_Dev = sd(rental_income))
+
+
+df_l1%>%
+  #filter(level == 2)%>%
+      ggplot(aes(y = rental_income, x = bedrooms)) +
+      geom_point() +
+      geom_smooth() +
+      ylab("Monthly Income per Listing") + 
+      xlab("# of Rooms per Listing")+
+      xlim(0,9) +
+      scale_x_continuous(breaks=seq(0,9,1))
+
+#partial(rf.listing500, pred.var = "bedrooms",
+#             plot = TRUE, train = X,  plot.engine = "ggplot2")
+```
+
+# Neighborhood and Rental Income
+```{r neighborhood, echo = FALSE}
+df_l1 %>%
+      group_by(neighborhood)%>%
+      #filter(level == 2)%>%
+      filter(n()>10)%>%
+      ggplot(aes(x = reorder(neighborhood,rental_income, median),
+                 y = rental_income)) +
+      geom_boxplot() +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+      ylim(0,10000) +
+      xlab("Neighborhood") +
+      ylab("Monthly Rental Income")
+
+df_l1 %>%
+      group_by(neighborhood)%>%
+      #filter(level == 2)%>%
+      filter(n()>10)%>%
+      ggplot(aes(x = reorder(neighborhood,price, median),
+                 y = price)) +
+      geom_boxplot() +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+      ylim(0,500) +
+      xlab("Neighborhood") +
+      ylab("Nightly Price")
+
+df_l1 %>%
+      group_by(neighborhood)%>%
+      #filter(level == 2)%>%
+      filter(n()>10)%>%
+      ggplot(aes(x = reorder(neighborhood,listing_weekend_price_native, median),
+                 y = listing_weekend_price_native)) +
+      geom_boxplot() +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+      ylim(0,500)+
+      xlab("Neighborhood") +
+      ylab("Weekend Nightly Price")
+      
+```
+
+Interestingly, even though the dataset included rentals from before and after the initiation of the COVID19 quarantine in Philadelphia, listing created shortly before the quarantine didn't seem to perform much worse than listings created after the quarantine
+```{r creation_date, echo=FALSE}
+lims <- as.POSIXct(strptime(c("2020-02-23 00:00", "2020-10-24 00:00"), 
+                   format = "%Y-%m-%d %H:%M"))
+ggplot(data=df_l0, aes(x= created_at, y=rental_income)) +geom_point() +
+  scale_x_date(date_breaks="1 week", date_labels="%W") +
+  xlim(as.Date("2019-12-05"), as.Date("2020-10-20"))
+ggplot(data=df_l0, aes(x= created_at, y=occupancy)) +geom_point() + 
+  scale_x_date(date_breaks="1 week", date_labels="%W") + xlim(as.Date("2019-12-05"), as.Date("2020-10-20"))
+
+
+```
+
 
 A number of amenities are available in nearly all properties.
 ```{r frequent_amenities, echo = FALSE}
@@ -90,199 +170,6 @@ df_amsums%>%filter(totals< quantile(totals, .25) ) %>%
   xlab("Amenity")
 
 ```
-
-
-
-
-# Imputation Graphs
-After cleaning less than 1% of the dataset was null/NA. Missing values were imputed using KNN with euclidean distance used as a metric and 3-6 nearby features selected by correlation for each variable, or by imputing the median. Pre- and post-imputation distributions are available below.
-
-```{r missings, echo = FALSE}
-
-
-###Total NA Values
-#missings = data.frame(name = names(colSums(is.na(df_comb %>%filter(level==1)))),
-#                      missing = colSums(is.na(df_comb%>%filter(level==1))))
-#missings = missings %>%
-#  filter(missing>0)%>%
-#  arrange(missing)
-
-#subset <- t(data.frame(missings$missing))
-#barplot(subset, legend = c("missing"), names.arg=missings$name, beside=TRUE)
-
-misses = colSums(is.na(df_comb%>%filter(level==1)))>0
-gg_miss_var(df_comb[misses])
-
-levnams = c("Pre-Imputation", "Post-Imputation")
-
-###Bedrooms
-
-df_comb %>%
-  ggplot(aes(x = bedrooms)) + 
-  geom_histogram() +
-  facet_grid(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation")))+
-  scale_x_continuous(name = "# of Bedrooms", breaks = seq(0,9, 1), limits = c(0,9))
-
-###Cleaning Fee
-df_comb%>%
-  ggplot(aes(x = cleaning_fee_native)) + 
-  geom_histogram() +
-  facet_wrap(~level,labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
-  ggtitle("Distribution of Cleaning Fees")+
-  xlim(0,250)
-
-###Check Out Time
-df_comb %>%
-  ggplot(aes(x = check_out_time)) + 
-  geom_histogram() +
-  facet_wrap(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
-  ggtitle("Distribution of Check Out Times") + 
-  xlab("Check Out Time (24 Hr)") +
-  xlim(0,24)
-
-#df_comb %>%
-#  group_by(level,check_out_time)%>%
-#  summarise(count = n())
-
-###Security Deposits
-df_comb %>%
-  ggplot(aes(x = security_deposit_native)) + 
-  geom_histogram(binwidth = 10) +
-  facet_wrap(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
-  ggtitle("Distribution of Security Deposit Amounts") + 
-  xlab("Some Outliers Eliminated") +
-  xlim(-5,1000)
-
-####Check In Time
-df_comb %>%
-  ggplot(aes(x = check_in_time)) + 
-  facet_grid(~ level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
-  geom_histogram() +
-  ggtitle("Distribution of Check In Time") + 
-  xlab("Check In Time")
-
-#df_comb %>%
-#  group_by(level,X24.hour.check.in) %>%
-#  summarise(missing = sum(is.na(check_in_time))/n() )
-
-
-###Locale
-df_comb %>%
-  ggplot(aes(x = locale)) + 
-  geom_bar(stat = "count") +
-  facet_wrap(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation")))
-
-#df_comb %>%
-#  group_by(level,locale)%>%
-#  summarise(count = n())
-
-###Last Update
-if( "updated_at" %in% colnames(df_comb)){
-df_comb %>%
-  ggplot(aes(x = updated_at)) + 
-  geom_freqpoly(stat = "count") +
-  facet_wrap(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
-  ggtitle("Time of Last Update") + 
-  xlab("All Dates 2020")}
-
-```
-
-#ANOVA Neighborhood
-Neighborhood was kept due to its substantial variance with response variables.
-
-```{r ANOVA_Neighborhood, echo = FALSE}
-summary(aov(rental_income ~ neighborhood , data = detailed_listings_post)) 
-summary(aov(price ~ neighborhood , data = detailed_listings_post)) 
-summary(aov(listing_weekend_price_native ~ neighborhood , data = detailed_listings_post)) 
-summary(aov(occupancy ~ occupancy , data = detailed_listings_post))
-
-summary(aov(rental_income ~ reviews_count , data = detailed_listings_post)) 
-summary(aov(price ~ reviews_count , data = detailed_listings_post)) 
-summary(aov(listing_weekend_price_native ~ reviews_count , data = detailed_listings_post))
-summary(aov(occupancy ~ reviews_count , data = detailed_listings_post))
-
-summary(aov(rental_income ~ instant_book_enabled , data = detailed_listings_post)) 
-summary(aov(price ~ instant_book_enabled , data = detailed_listings_post)) 
-summary(aov(listing_weekend_price_native ~ instant_book_enabled , data = detailed_listings_post))
-summary(aov(occupancy ~ instant_book_enabled , data = detailed_listings_post))
-
-
-summary(aov(rental_income ~ property_type , data = detailed_listings_post)) 
-summary(aov(price ~ property_type , data = detailed_listings_post)) 
-summary(aov(listing_weekend_price_native ~ property_type , data = detailed_listings_post))
-summary(aov(occupancy ~ property_type , data = detailed_listings_post))
-
-summary(aov(rental_income ~ picture_count , data = detailed_listings_post)) 
-summary(aov(price ~ picture_count , data = detailed_listings_post)) 
-summary(aov(listing_weekend_price_native ~ picture_count , data = detailed_listings_post))
-summary(aov(occupancy ~ picture_count , data = detailed_listings_post))
-
-```
-
-#ANOVA Drops
-However, zipcode and city did not vary substantially with response variables, respectively and so were dropped from subsequent modeling. "is_location_exact", "description_locale", "require_guest_phone_verification", "instant_bookable" and "require_guest_phone_verification" were dropped for similar reasons.
-
-
-```{r ANOVA_drops, echo = FALSE}
-#summary(aov(rental_income ~ zipcode , data = detailed_listings_post)) 
-#summary(aov(price ~ zipcode , data = detailed_listings_post)) 
-#summary(aov(listing_weekend_price_native ~ zipcode , data = detailed_listings_post)) 
-
-#summary(aov(rental_income ~ city , data = detailed_listings_post)) 
-#summary(aov(price ~ city , data = detailed_listings_post)) 
-#summary(aov(listing_weekend_price_native ~ city , data = detailed_listings_post)) 
-
-#summary(aov(rental_income ~ city , data = detailed_listings_post)) 
-#summary(aov(price ~ city , data = detailed_listings_post)) 
-#summary(aov(listing_weekend_price_native ~ city , data = detailed_listings_post))
-
-summary(aov(rental_income ~ bed_type_category , data = detailed_listings_post)) 
-summary(aov(price ~ bed_type_category , data = detailed_listings_post)) 
-summary(aov(listing_weekend_price_native ~ bed_type_category , data = detailed_listings_post))
-summary(aov(occupancy ~ bed_type_category , data = detailed_listings_post))
-
-
-summary(aov(rental_income ~ require_guest_phone_verification , data = detailed_listings_post)) 
-summary(aov(price ~ require_guest_phone_verification , data = detailed_listings_post)) 
-summary(aov(listing_weekend_price_native ~ require_guest_phone_verification , data = detailed_listings_post))
-summary(aov(occupancy ~ require_guest_phone_verification , data = detailed_listings_post))
-
-summary(aov(rental_income ~ is_location_exact , data = detailed_listings_post)) 
-summary(aov(price ~ is_location_exact , data = detailed_listings_post)) 
-summary(aov(listing_weekend_price_native ~ is_location_exact , data = detailed_listings_post))
-summary(aov(occupancy ~ is_location_exact , data = detailed_listings_post))
-
-summary(aov(rental_income ~ instant_bookable , data = detailed_listings_post)) 
-summary(aov(price ~ instant_bookable , data = detailed_listings_post))
-summary(aov(listing_weekend_price_native ~ instant_bookable , data = detailed_listings_post))
-summary(aov(occupancy ~ instant_bookable , data = detailed_listings_post))
-
-summary(aov(rental_income ~ require_guest_profile_picture , data = detailed_listings_post)) 
-summary(aov(price ~ require_guest_profile_picture , data = detailed_listings_post)) 
-summary(aov(listing_weekend_price_native ~ require_guest_profile_picture , data = detailed_listings_post))
-summary(aov(occupancy ~ require_guest_profile_picture , data = detailed_listings_post))
-
-summary(aov(rental_income ~ description_locale , data = detailed_listings_post)) 
-summary(aov(price ~ description_locale , data = detailed_listings_post)) 
-summary(aov(listing_weekend_price_native ~ description_locale , data = detailed_listings_post))
-summary(aov(occupancy ~ description_locale , data = detailed_listings_post))
-
-summary(aov(rental_income ~ locale , data = detailed_listings_post)) 
-summary(aov(price ~ locale , data = detailed_listings_post)) 
-summary(aov(listing_weekend_price_native ~ locale , data = detailed_listings_post))
-summary(aov(occupancy ~ locale , data = detailed_listings_post))
-
-
-```
-
-In order to improve modeling on non-tree models I dropped amenities with near-zero variance, listed below.
-```{r amdrops, echo = FALSE }
-amdrops_pre = c(colnames(df_amenities_pre)) 
-amdrops = c(colnames(df_amenities))
-amdrops_fin = amdrops_pre[!(amdrops_pre %in% amdrops)]
-amdrops_fin
-```
-
 ```{r var_amenity_count, echo=FALSE}
 amnames = c()
 for(ams in 1:length(df_amenities)){
@@ -295,13 +182,13 @@ df_comb$amenity_count = rowSums(df_comb[amnames])
 After variance drops I evaluated the number of amenities offered per listing, below. 
 
 ```{r amenity distribution, echo = FALSE}
-
 getmode <- function(v) {
    uniqv <- unique(v)
    uniqv[which.max(tabulate(match(v, uniqv)))]
 }
-df_comb %>%
-  filter(level == 2)%>%
+
+df_l2 %>%
+  #filter(level == 2)%>%
   ggplot(aes(x = amenity_count)) +
   geom_histogram() + 
   ggtitle("Distribution of Amenities per Listing") +
@@ -318,55 +205,12 @@ df_comb %>%
 
 ```
 
-```{r dummy_x_split, echo = FALSE}
-
-
-###########
-##Dummies##
-###########
-df_imp = df_comb %>%
-  select(rental_income, everything()) %>% filter(level ==2)
-df_imp = df_imp[complete.cases(df_imp),]
-X <- model.matrix(rental_income ~.,
-                     data = df_imp)[,-1]
-
-y = df_imp$rental_income
-set.seed(0)
-train = sample(1:nrow(X), 7*nrow(X)/10)
-test = (-train)
-y.test = y[test]
-grid = 10^seq(5, -2, length = 100)
-```
-
-```{r tree_imp, echo = FALSE}
-library(randomForest)
-set.seed(0)
-rf.listing500 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 500 )
-df_tree_imp = data.frame(importance(rf.listing500))
-df_tree_imp = df_tree_imp %>%arrange(desc(X.IncMSE))#%>% filter(totalnames)
-rows_to_keep <- which(row.names(df_tree_imp) %in% totalnames)
-df_tree_imp <- df_tree_imp[rows_to_keep,]
-```
 There seems to be a positive relationship between the number of amenities a listing offers and number of rooms (bathrooms plus bedrooms) per listing or the price of the listing, respectively. 
-
-```{r price_amenity_count, echo = FALSE}
-df_comb %>%
-  filter(level == 2)%>%
-  ggplot(aes(y = price, 
-             x = amenity_count)) +
-  geom_smooth() +
-  geom_point(position = "jitter", size = 0.1, stroke = 0, color = "orange")+
-  ylim(0,1000) +
-  ylab("Nightly Price (Weeknight)") +
-  xlab("# of Amenities Offered per Listing")+
-  ggtitle("Nightly Price vs # of Amenities per Listing")
-```
-
 
 ```{r rooms_amenity_count, echo = FALSE}
 
-df_comb %>%
-  filter(level == 2)%>%
+df_l2 %>%
+  #filter(level == 2)%>%
   ggplot(aes(y = amenity_count, 
              x = rooms)) +
   geom_smooth() +
@@ -378,13 +222,28 @@ df_comb %>%
   xlim(0,9)
 ```
 
-However, when related to rental income, the number of amenities seems to be positively related only within specific tolerances. This may suggest that above a certain threshold, more amenities only overwhelm potential travelers, or, below a certain threshold, communicate disinterest on the part of the host.
+And, in general, properties that have more amenities appear to charge slightly more.
+
+```{r price_amenity_count, echo = FALSE}
+df_l2 %>%
+  #filter(level == 2)%>%
+  ggplot(aes(y = price, 
+             x = amenity_count)) +
+  geom_smooth() +
+  geom_point(position = "jitter", size = 0.1, stroke = 0, color = "orange")+
+  ylim(0,1000) +
+  ylab("Nightly Price") +
+  xlab("# of Amenities Offered per Listing")+
+  ggtitle("Nightly Price vs # of Amenities per Listing")
+```
+However, when related to rental income or occupancy, the number of amenities seems to be positively related only within specific tolerances. This may suggest that above a certain threshold, more amenities only overwhelm potential travelers, or, below a certain threshold, communicate disinterest on the part of the host, although limited data at particularly high or low counts creates substantial uncertainty.
+
 
 ```{r disp_amenity_count, echo = FALSE}
-library(pdp)
-library(randomForest)
-df_comb %>%
-  filter(level == 2)%>%
+#library(pdp)
+#library(randomForest)
+df_l2 %>%
+  #filter(level == 2)%>%
   ggplot(aes(y = rental_income, 
              x = amenity_count)) +
   geom_smooth() +
@@ -393,71 +252,29 @@ df_comb %>%
   ylab("Rental Income") +
   xlab("# of Amenities Offered per Listing")+
   ggtitle("Monthly Rental Income vs # of Amenities per Listing")
-#rf.listing500 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 500    
-partial(rf.listing500, pred.var = "amenity_count",
-             plot = TRUE, train = X,  plot.engine = "ggplot2")
-
-```
-
-# Rooms and Rental Income
-```{r rooms, echo = FALSE}
-
-
-df_comb%>%
+df_comb %>%
   filter(level == 2)%>%
-      ggplot(aes(y = rental_income, x = bedrooms)) +
-      geom_point() +
-      geom_smooth() +
-      ylab("Monthly Income per Listing") + 
-      xlab("# of Rooms per Listing")+
-      xlim(0,9) +
-      scale_x_continuous(breaks=seq(0,9,1))
+  ggplot(aes(y = occupancy, 
+             x = amenity_count)) +
+  geom_smooth() +
+  geom_point(position = "jitter", size = 0.1, stroke = 0, color = "orange")+
+#  ylim(0,10000) +
+  ylab("Occupancy") +
+  xlab("# of Amenities Offered per Listing")+
+  ggtitle("Occupancy vs # of Amenities per Listing")
+#rf.listing500 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 500    
+#partial(rf.listing500, pred.var = "amenity_count",
+#             plot = TRUE, train = X,  plot.engine = "ggplot2")
 
-partial(rf.listing500, pred.var = "bedrooms",
-             plot = TRUE, train = X,  plot.engine = "ggplot2")
-```
-
-# Neighborhood and Rental Income
-```{r neighborhood, echo = FALSE}
-df_comb %>%
-      group_by(neighborhood)%>%
-      filter(level == 2)%>%
-      filter(n()>10)%>%
-      ggplot(aes(x = reorder(neighborhood,rental_income, median),
-                 y = rental_income)) +
-      geom_boxplot() +
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
-      ylim(0,10000)
-
-df_comb %>%
-      group_by(neighborhood)%>%
-      filter(level == 2)%>%
-      filter(n()>10)%>%
-      ggplot(aes(x = reorder(neighborhood,price, median),
-                 y = price)) +
-      geom_boxplot() +
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
-      ylim(0,500)
-
-df_comb %>%
-      group_by(neighborhood)%>%
-      filter(level == 2)%>%
-      filter(n()>10)%>%
-      ggplot(aes(x = reorder(neighborhood,listing_weekend_price_native, median),
-                 y = listing_weekend_price_native)) +
-      geom_boxplot() +
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
-      ylim(0,500)
-      
 ```
 
 # Multicolinearity
 One issue I dealt with working with this data set was the sheer number of variables, which you can get a sense of from the corrplot below.
 ```{r multicolinearity, echo = FALSE}
 library(RColorBrewer)
-cc = df_comb%>%
-               filter(level == 2)%>%
-               select(!level)%>%
+cc = df_l2%>%
+               #filter(level == 2)%>%
+               #select(!level)%>%
                #select(!amnames)%>%
                select_if(is.numeric) %>%
                select_if(~ !any(is.na(.)))%>%
@@ -562,7 +379,7 @@ ccc = ccc[ok, ok]
 
 
 ```
-We also see correlations between access-related amenities that correspond to different locations within the listing.
+We also see correlations between access-related amenities that correspond to different locations within the listing, suggesting some possible redundancy in listings or that landlords are willing to make their properties more accessible when possible, but possibly unwilling or unable to ensure complete accessibility in many instances.
 ```{r access, echo = FALSE}
 
 
@@ -644,7 +461,7 @@ ccco = ccco[ok, ok]
               #addrect = 4
               )
 ```
-Lots of obvious relationships in the kitchen - listings with ovens tend to have stoves, cooking basics, microwaves, and refrigerators and there's a strong relationship between microwave and coffee machines. Interestingly, there isn't much of a relationship between listings that offer a Keurig or pour-over coffee and more complete kitchen amenities, suggesting that these may be more frequently offered in listings that offer a small coffee/snack station but not a full-service kitchen.
+Lots of obvious relationships in the kitchen - listings with ovens tend to have stoves, cooking basics, microwaves, and refrigerators and there's a strong relationship between microwave and coffee machines. Interestingly, there isn't much of a relationship between listings that offer a Keurig or pour-over coffee and more complete kitchen amenities, suggesting that these may be more frequently offered in listings that offer a small coffee/snack station but not a full-service kitchen, or, alternatively, that owners aren't very specific about the kinds of coffee in their listings.
 ```{r kitchen}
 
 
@@ -717,11 +534,11 @@ ccf = ccf[ok, ok]
               order = "hclust",
               type = "lower",
              #tl.cex = .2,
-             col = brewer.pal(n = 12, name = "RdYlBu")
+             col = brewer.pal(n = 12, name = "RdBu")
               #addrect = 4
               )
 ```
-
+Unsurprisingly, listings with an exterior space are more likely to own a grill.
 ```{r outdoor}
 ostring=c("BBQ.grill", "Patio.or.balcony", "Garden.or.backyard")
 
@@ -758,7 +575,7 @@ cco = cco[ok, ok]
 ```{r corr}
 
 
-threshold <- .8
+threshold <- .7
 cc0 <- cc
 diag(cc0) <- 0
 ok <- apply(abs(cc0) >= threshold, 1, any)
@@ -772,6 +589,169 @@ cc
 #  cors = data.frame(cor(detailed_listings[,nums], use = "na.or.complete"))
 #  cors = cors%>%
 #    arrange(star_rating)
+```
+
+
+# Imputation Graphs
+After cleaning less than 1% of the dataset was null/NA. Missing values were imputed using KNN with euclidean distance used as a metric and 3-6 nearby features selected by correlation for each variable, or by imputing the median. Pre- and post-imputation distributions are available below.
+
+```{r missings, echo = FALSE}
+
+
+###Total NA Values
+#missings = data.frame(name = names(colSums(is.na(df_comb %>%filter(level==1)))),
+#                      missing = colSums(is.na(df_comb%>%filter(level==1))))
+#missings = missings %>%
+#  filter(missing>0)%>%
+#  arrange(missing)
+
+#subset <- t(data.frame(missings$missing))
+#barplot(subset, legend = c("missing"), names.arg=missings$name, beside=TRUE)
+
+misses = colSums(is.na(df_comb%>%filter(level==1)))>0
+gg_miss_var(df_comb[misses])
+
+levnams = c("Pre-Imputation", "Post-Imputation")
+
+###Bedrooms
+
+df_comb %>%
+  ggplot(aes(x = bedrooms)) + 
+  geom_histogram() +
+  facet_grid(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation")))+
+  scale_x_continuous(name = "# of Bedrooms", breaks = seq(0,9, 1), limits = c(0,9))
+
+###Cleaning Fee
+df_comb%>%
+  ggplot(aes(x = cleaning_fee_native)) + 
+  geom_histogram() +
+  facet_wrap(~level,labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
+  ggtitle("Distribution of Cleaning Fees")+
+  xlim(0,250)
+
+###Check Out Time
+df_comb %>%
+  ggplot(aes(x = check_out_time)) + 
+  geom_histogram() +
+  facet_wrap(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
+  ggtitle("Distribution of Check Out Times") + 
+  xlab("Check Out Time (24 Hr)") +
+  xlim(0,24)
+
+#df_comb %>%
+#  group_by(level,check_out_time)%>%
+#  summarise(count = n())
+
+###Security Deposits
+df_comb %>%
+  ggplot(aes(x = security_deposit_native)) + 
+  geom_histogram(binwidth = 10) +
+  facet_wrap(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
+  ggtitle("Distribution of Security Deposit Amounts") + 
+  xlab("Some Outliers Eliminated") +
+  xlim(-5,1000)
+
+####Check In Time
+df_comb %>%
+  ggplot(aes(x = check_in_time)) + 
+  facet_grid(~ level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
+  geom_histogram() +
+  ggtitle("Distribution of Check In Time") + 
+  xlab("Check In Time")
+
+#df_comb %>%
+#  group_by(level,X24.hour.check.in) %>%
+#  summarise(missing = sum(is.na(check_in_time))/n() )
+
+
+###Locale
+df_comb %>%
+  ggplot(aes(x = locale)) + 
+  geom_bar(stat = "count") +
+  facet_wrap(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation")))
+
+#df_comb %>%
+#  group_by(level,locale)%>%
+#  summarise(count = n())
+
+###Last Update
+if( "updated_at" %in% colnames(df_comb)){
+df_comb %>%
+  ggplot(aes(x = updated_at)) + 
+  geom_freqpoly(stat = "count") +
+  facet_wrap(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
+  ggtitle("Time of Last Update") + 
+  xlab("All Dates 2020")}
+
+```
+
+
+#ANOVA Drops
+ANOVA testing was used to eliminate zipcode and city on the basis of inadquate variance. "is_location_exact", "description_locale", "require_guest_phone_verification", "instant_bookable" and "require_guest_phone_verification" were dropped for similar reasons.
+
+
+```{r ANOVA_drops, echo = FALSE}
+summary(aov(rental_income ~ zipcode , data = df_l0)) 
+summary(aov(price ~ zipcode , data = df_l0)) 
+summary(aov(listing_weekend_price_native ~ zipcode , data = df_l0)) 
+
+summary(aov(rental_income ~ city , data = df_l0)) 
+summary(aov(price ~ city , data = df_l0)) 
+summary(aov(listing_weekend_price_native ~ city , data = df_l0)) 
+
+summary(aov(rental_income ~ city , data = df_l0)) 
+summary(aov(price ~ city , data = df_l0)) 
+summary(aov(listing_weekend_price_native ~ city , data = df_l0))
+
+summary(aov(rental_income ~ bed_type_category , data = df_l0)) 
+summary(aov(price ~ bed_type_category , data = df_l0)) 
+summary(aov(listing_weekend_price_native ~ bed_type_category , data = df_l0))
+summary(aov(occupancy ~ bed_type_category , data = df_l0))
+
+
+summary(aov(rental_income ~ require_guest_phone_verification , data = df_l0)) 
+summary(aov(price ~ require_guest_phone_verification , data = df_l0)) 
+summary(aov(listing_weekend_price_native ~ require_guest_phone_verification , data = df_l0))
+summary(aov(occupancy ~ require_guest_phone_verification , data = df_l0))
+
+summary(aov(rental_income ~ is_location_exact , data = df_l0)) 
+summary(aov(price ~ is_location_exact , data = df_l0)) 
+summary(aov(listing_weekend_price_native ~ is_location_exact , data = df_l0))
+summary(aov(occupancy ~ is_location_exact , data = df_l0))
+
+summary(aov(rental_income ~ instant_bookable , data = df_l0)) 
+summary(aov(price ~ instant_bookable , data = df_l0))
+summary(aov(listing_weekend_price_native ~ instant_bookable , data = df_l0))
+summary(aov(occupancy ~ instant_bookable , data = df_l0))
+
+summary(aov(rental_income ~ require_guest_profile_picture , data = df_l0)) 
+summary(aov(price ~ require_guest_profile_picture , data = df_l0)) 
+summary(aov(listing_weekend_price_native ~ require_guest_profile_picture , data = df_l0))
+summary(aov(occupancy ~ require_guest_profile_picture , data = df_l0))
+
+summary(aov(rental_income ~ description_locale , data = df_l0)) 
+summary(aov(price ~ description_locale , data = df_l0)) 
+summary(aov(listing_weekend_price_native ~ description_locale , data = df_l0))
+summary(aov(occupancy ~ description_locale , data = df_l0))
+
+summary(aov(rental_income ~ locale , data = df_l0)) 
+summary(aov(price ~ locale , data = df_l0)) 
+summary(aov(listing_weekend_price_native ~ locale , data = df_l0))
+summary(aov(occupancy ~ locale , data = df_l0))
+
+summary(aov(rental_income ~ max_nights , data = df_l0)) 
+summary(aov(price ~ max_nights , data = df_l0)) 
+summary(aov(listing_weekend_price_native ~ max_nights , data = df_l0))
+summary(aov(occupancy ~ max_nights , data = df_l0))
+
+```
+
+In order to improve modeling on non-tree models I dropped amenities with near-zero variance, listed below.
+```{r amdrops, echo = FALSE }
+amdrops_pre = c(colnames(df_amenities_pre)) 
+amdrops = c(colnames(df_amenities))
+amdrops_fin = amdrops_pre[!(amdrops_pre %in% amdrops)]
+amdrops_fin
 ```
 
 
