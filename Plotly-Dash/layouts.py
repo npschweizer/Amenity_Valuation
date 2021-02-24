@@ -26,6 +26,7 @@ homepage_layout = html.Div(
                                     multi = True,
                                     persistence = True,
                                 ),
+                                html.Img(id='example'),
                             ]),
                             dbc.Col(dcc.Markdown([
                                 "##### Correlation Coefficients between Daily Cases and Mobility\n",

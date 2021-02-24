@@ -1,7 +1,9 @@
 '''
 Define all the callbacks on each page
 '''
-
+import base64
+import matplotlib.pyplot as plt
+import io
 from dash.dependencies import Input, Output
 from app import app
 import plotly.express as px
@@ -31,7 +33,8 @@ for name in Amenity_Names:
 NUMERICAL_TYPES.remove("occupancy")
 NUMERICAL_TYPES.remove("rental_income")
 NUMERICAL_TYPES.remove("neighborhood")
-NUMERICAL_TYPES.remove("Laptop friendly workspace")
+if 'Laptop friendly workspace' in NUMERICAL_TYPES:
+    NUMERICAL_TYPES.remove("Laptop friendly workspace")
 NUMERICAL_TYPES.remove("cancellation_policy")
 NUMERICAL_TYPES.remove("property_type")
 NUMERICAL_TYPES.remove("instant_book_enabled")
@@ -53,10 +56,10 @@ def update_card_value(amenity_checkbox,property_type,cancellation_policy, neighb
     ri=np.median(df.rental_income)
     for i in df_ud.cancellation_policy.unique():
         if i in cancellation_policy:
-            pred[str('property_type__' + i)] = 1
+            pred[str('cancellation_policy__' + i)] = 1
             #print(pred[str('property_type__' + i)])
         else:
-            pred[str('property_type__' + i)] = 0
+            pred[str('cancellation_policy__' + i)] = 0
             #print(pred[str('property_type__' + i)])
     #for i in list(map(str,df_ud.instant_book_enabled.unique())):
     #    if i in instant_book_enabled:
@@ -119,6 +122,37 @@ def update_card_value(amenity_checkbox, neighborhood, *vals):
     #ri = stack.predict(pred.iloc[0])
     return str(oc)
 
+@app.callback(
+    Output('example', 'src'),
+    #Output('ale', 'children'),
+    [Input('amenity_checkbox-ale', 'value')])
+def update_amenity_ale(amenity_checkbox_ale):
+    #create some matplotlib graph
+    # x = np.random.rand(50)
+    # y = np.random.rand(50)
+    # buf = io.BytesIO() # in-memory files
+    # plt.savefig(buf, format = "png") # save to the above file object
+    plt.figure()
+    plt.plot([1, 2])
+    plt.title("test")
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    #im = Image.open(buf)
+    #im.show()
+    #buf.close()
+    data = base64.b64encode(buf.getbuffer()).decode("utf8") # encode to html elements
+    plt.close()
+    return "data:image/png;base64,{}".format(data)
+
+    # buf=io.BytesIO()
+    # plot.savefiale_plot(model=stack,train_set= df.drop(["occupancy", "rental_income"], axis =1),
+    #     features= 'bedrooms',
+    #     bins=20, 
+    #     monte_carlo=True)
+    #print(stack.predict(pred.iloc[0]))
+    #ri = stack.predict(pred.iloc[0])
+    
 
     # dbc.Card(dbc.CardBody(
     #      [
