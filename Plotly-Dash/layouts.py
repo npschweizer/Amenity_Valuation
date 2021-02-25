@@ -127,8 +127,8 @@ predictor_layout = html.Div(children=[
                         dcc.Dropdown(
                             id='instant_book_enabled',
                             options=
-                                [{"label":instant_book_enabled, "value": instant_book_enabled} for instant_book_enabled in df_ud.instant_book_enabled.unique()]
-                            ,
+                                [{"label":"True", "value": "True"},
+                                {"label":"False", "value":"False"}],
                             value='True',
                             clearable=False,
                             style={"width": 100}

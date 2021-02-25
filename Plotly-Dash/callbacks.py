@@ -48,10 +48,10 @@ NUMERICAL_TYPES.remove("instant_book_enabled")
     [Input('cancellation_policy', 'value')],
     [Input('property_type', 'value')],
     [Input('neighborhood', 'value')],
-#    [Input('instant_book_enabled', 'value')],
+    [Input('instant_book_enabled', 'value')],
     Input('submit-button', 'n_clicks'),
     [Input("{}".format(_), 'value') for _ in NUMERICAL_TYPES])
-def update_card_value(amenity_checkbox,property_type,cancellation_policy, neighborhood, *vals):
+def update_card_value(amenity_checkbox,property_type,cancellation_policy, neighborhood,instant_book_enabled, *vals):
     pred = pd.DataFrame(np.zeros((1,len(df.columns.drop("occupancy")))),columns=df.drop("occupancy",axis=1).columns)
     ri=np.median(df.rental_income)
     for i in df_ud.cancellation_policy.unique():
@@ -61,12 +61,12 @@ def update_card_value(amenity_checkbox,property_type,cancellation_policy, neighb
         else:
             pred[str('cancellation_policy__' + i)] = 0
             #print(pred[str('property_type__' + i)])
-    #for i in list(map(str,df_ud.instant_book_enabled.unique())):
-    #    if i in instant_book_enabled:
-    #        pred[str('instant_book_enabled__' + i)] = 1
-    #    else:
-    #        pred[str('instant_book_enabled__'+ i)] = 0
-    
+    if instant_book_enabled =="True":
+        pred['instant_book_enabled__True'] = 1
+        pred['instant_book_enabled__False'] = 0
+    else:
+        pred['instant_book_enabled__True'] = 0
+        pred['instant_book_enabled__False'] = 1
     for i in df_ud.property_type.unique():
         if i in property_type:
             pred[str('property_type__' + i)] = 1
