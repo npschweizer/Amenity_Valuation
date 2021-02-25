@@ -61,6 +61,33 @@ detailed_listings %>%ggplot(aes(x = price)) + geom_histogram(binwidth = 50)
 #median(detailed_listings$price) #104
 ```
 
+The number of properties managed by a host appeared to significantly vary with rental income, although the effect isn't strictly linear. Property count doesn't correlate substantially with any other numerical variable in the dataset and it's introduction appears to dramatically reduce overfit in linear modeling.
+```{r user_count, echo= FALSE}
+df_host = df_l1%>%group_by(host_id)%>%
+  summarise(count=n())
+df_l1=left_join(df_l1, df_host, by= "host_id")
+
+df_l1 %>%
+  ggplot(aes(x=count.x, y=rental_income/bedrooms))+
+  geom_smooth() + 
+  geom_point()
+
+df_l1 %>%
+  ggplot(aes(x=count.x)) + 
+  geom_histogram()
+
+df_l1 %>%
+  ggplot(aes(x=count.x, y=rental_income))+
+  geom_smooth() + 
+  geom_point()
+
+plot(lm(rental_income ~count.x + reviews_count , data=df_l1)) 
+
+df_cort=data.frame(df_l1%>% select_if(is.numeric)%>%cor(use="pairwise.complete.obs"))
+df_cort$count.x
+```
+
+
 Unsurprisingly, larger properties appear to earn more, although it's important to remember that more income != more profit.
 
 # Rooms and Rental Income
@@ -236,7 +263,7 @@ df_l2 %>%
   xlab("# of Amenities Offered per Listing")+
   ggtitle("Nightly Price vs # of Amenities per Listing")
 ```
-However, when related to rental income or occupancy, the number of amenities seems to be positively related only within specific tolerances. This may suggest that above a certain threshold, more amenities only overwhelm potential travelers, or, below a certain threshold, communicate disinterest on the part of the host, although limited data at particularly high or low counts creates substantial uncertainty.
+However, when related to rental income or occupancy, the number of amenities seems to be positively related only within specific tolerances. This may suggest that above a certain threshold, more amenities only overwhelm potential travelers, or, below a certain threshold, communicate disinterest on the part of the host, although limited data at particularly high or low counts creates substantial uncertainty. Of note, adding amenity count to penalized linear modeling appeared to greatly increase overfitting.
 
 
 ```{r disp_amenity_count, echo = FALSE}
@@ -272,7 +299,7 @@ df_comb %>%
 One issue I dealt with working with this data set was the sheer number of variables, which you can get a sense of from the corrplot below.
 ```{r multicolinearity, echo = FALSE}
 library(RColorBrewer)
-cc = df_l2%>%
+cc = df_l1%>%
                #filter(level == 2)%>%
                #select(!level)%>%
                #select(!amnames)%>%
@@ -501,6 +528,49 @@ cck = cck[ok, ok]
              col = brewer.pal(n = 12, name = "RdYlBu")
               #addrect = 4
               )
+
+```
+Amenities "Full Kitchen" and "Kitchenette" only apear on listings that also have "Kitchen", suggesting that they are probably modifiers on the "Kitchen" feature.
+
+```{r kit, echo=false}
+
+df_l1%>%filter(Kitchen == 1)%>%
+  summarise(Kitchens=n())
+
+df_l1%>%filter(Full.kitchen == 1)%>%
+  summarise(Full.Kitchens=n())
+
+df_l1%>%filter(Kitchen == 1)%>%
+     filter(Full.kitchen==1)%>%
+  summarise(KitchenNFullKitchen=n())
+
+df_l1%>%filter(Kitchenette == 1)%>%
+  summarise(Kitchenette=n())
+
+df_l1%>%filter(Kitchen == 1)%>%
+     filter(Kitchenette==1)%>%
+  summarise(KitchenNKitchenette=n())
+
+df_l1%>%filter(Full.kitchen == 1)%>%
+     filter(Kitchenette==1)%>%
+  summarise(FullKitchenNKitchenette=n())
+
+df_kitchen%>%filter(Kitchenette==1)
+
+```
+
+The same thing appears to be true for ovens and convection ovens
+```{r oven, echo=false}
+
+df_l1%>%filter(Oven == 1)%>%
+  summarise(Oven=n())
+
+df_l1%>%filter(Convection.oven == 1)%>%
+  summarise(Convection.oven=n())
+
+df_l1%>%filter(Oven == 1)%>%
+     filter(Convection.oven==1)%>%
+  summarise(Ovens=n())
 
 ```
 Some obvious correlations in facilities - listings with pools were more likely to have gyms and hottubs. Listings with gyms were less likely to offer free street parking, suggesting that they typically come in larger buildings in the city center where street parking isn't available. 
@@ -753,7 +823,3 @@ amdrops = c(colnames(df_amenities))
 amdrops_fin = amdrops_pre[!(amdrops_pre %in% amdrops)]
 amdrops_fin
 ```
-
-
-
-

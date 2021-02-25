@@ -20,7 +20,7 @@ pd.set_option('display.max_columns', None)
 df = pd.read_pickle("app.data")
 df_amenity = pd.read_pickle("ammenity.data")
 
-stack= pickle.load(open('finalized_model_ri.sav', 'rb'))
+stack= pickle.load(open('ridge_ri.sav', 'rb'))
 stackO= pickle.load(open('finalized_model_o.sav', 'rb'))
 df_ud = pd.read_csv("l2_detailed_listings.csv", encoding = "UTF-8")
 #print('Hello world!')
@@ -123,35 +123,32 @@ def update_card_value(amenity_checkbox, neighborhood, *vals):
     return str(oc)
 
 @app.callback(
-    Output('example', 'src'),
+    Output('main-features-histogram', 'src'),
     #Output('ale', 'children'),
-    [Input('amenity_checkbox-ale', 'value')])
-def update_amenity_ale(amenity_checkbox_ale):
-    #create some matplotlib graph
-    # x = np.random.rand(50)
-    # y = np.random.rand(50)
-    # buf = io.BytesIO() # in-memory files
-    # plt.savefig(buf, format = "png") # save to the above file object
-    plt.figure()
-    plt.plot([1, 2])
-    plt.title("test")
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    #im = Image.open(buf)
-    #im.show()
-    #buf.close()
-    data = base64.b64encode(buf.getbuffer()).decode("utf8") # encode to html elements
-    plt.close()
-    return "data:image/png;base64,{}".format(data)
+    [Input('numerical_types', 'value')])
+def update_amenity_ale(value):
+    fig = px.histogram(df_ud, x=value,
+                   title=str('Distribution of ' + value),
+                   labels={'total_bill':'total bill'}, # can specify one label per df column
+                   opacity=0.8,
+                   log_y=True, # represent bars with log scale
+                   color_discrete_sequence=['indianred'] # color of histogram bars
+                   )
+    return fig
 
-    # buf=io.BytesIO()
-    # plot.savefiale_plot(model=stack,train_set= df.drop(["occupancy", "rental_income"], axis =1),
-    #     features= 'bedrooms',
-    #     bins=20, 
-    #     monte_carlo=True)
-    #print(stack.predict(pred.iloc[0]))
-    #ri = stack.predict(pred.iloc[0])
+# @app.callback(
+#     Output('example', 'src'),
+#     #Output('ale', 'children'),
+#     [Input('numerical_types', 'value')])
+# def update_amenity_ale(amenity_checkbox_ale):
+#     buf = io.BytesIO()
+#     plot = ale_plot(model=stack,train_set= df.drop(["occupancy", "rental_income"], axis =1),
+#          features= 'bedrooms',
+#          bins=20, 
+#          monte_carlo=True).get_figure().savefig(buf, format='png')
+#     data = base64.b64encode(buf.getbuffer()).decode("utf8") # encode to html elements
+#     return "data:image/png;base64,{}".format(data)
+
     
 
     # dbc.Card(dbc.CardBody(

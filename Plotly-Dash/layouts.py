@@ -4,7 +4,7 @@ Define the layouts of each page/url
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
-from callbacks import df, df_amenity, df_ud, stack, stackO  # import the df loaded from callbacks so we don't need to load it again
+from callbacks import df, df_amenity, df_ud, stack, stackO, NUMERICAL_TYPES  # import the df loaded from callbacks so we don't need to load it again
 from alepython import ale_plot
 import pandas as pd
 pd.set_option('display.max_columns', None)
@@ -15,18 +15,19 @@ homepage_layout = html.Div(
                         [
                             dbc.Col([        
                                 html.H6(
-                                    'Amenities',
+                                    'Main Features',
                                         style={'text-align': 'center'}
                                 ),
                                 dcc.Dropdown(
-                                    id='amenity_checkbox-ale',
+                                    id='numerical_types',
                                     options=
-                                        [{"label": amenity, "value": amenity} for amenity in df_amenity.columns],
-                                    value='Dishwasher',
-                                    multi = True,
+                                        [{"label": num_type, "value": num_type} for num_type in NUMERICAL_TYPES],
+                                    value='bedrooms',
+                                    multi = False,
                                     persistence = True,
                                 ),
-                                html.Img(id='example'),
+                                dcc.Graph(id="main-features-histogram")#,
+                                # html.Img(id='example')
                             ]),
                             dbc.Col(dcc.Markdown([
                                 "##### Correlation Coefficients between Daily Cases and Mobility\n",
