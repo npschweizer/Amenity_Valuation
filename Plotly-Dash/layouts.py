@@ -26,8 +26,8 @@ homepage_layout = html.Div(
                                     multi = False,
                                     persistence = True,
                                 ),
-                                dcc.Graph(id="main-features-histogram")#,
-                                # html.Img(id='example')
+                                dcc.Graph(id="main-features-histogram"),
+                                html.Img(id='example')
                             ]),
                             dbc.Col(dcc.Markdown([
                                 "##### Correlation Coefficients between Daily Cases and Mobility\n",

@@ -7,8 +7,9 @@ detailed_listings_post = read.csv("l2_detailed_listings.csv", stringsAsFactors =
 df_amenities_pre = read.csv("l0_amenities.csv", stringsAsFactors = TRUE, header = TRUE, fileEncoding = 'UTF-8-BOM')
 df_amenities = read.csv("l1_amenities.csv", stringsAsFactors = TRUE, header = TRUE, fileEncoding = 'UTF-8-BOM')
 df_train = read.csv("train.csv", stringsAsFactors = TRUE, header = FALSE, fileEncoding = 'UTF-8-BOM')
-train = df_train$V1
-#train = seq(1, nrow(detailed_listings_post) * .8,1)
+#train = df_train$V1
+1
+train = seq(1, nrow(detailed_listings_post) * .8,1)
 library(dplyr)
 library(ggplot2)
 library(corrplot)
@@ -20,8 +21,8 @@ library(shiny)
 library(shinydashboard)
 detailed_listings$level = 1
 detailed_listings_post$level = 2
-#df_comb = rbind(detailed_listings, detailed_listings_post)
-df_comb= detailed_listings_post
+df_comb = rbind(detailed_listings, detailed_listings_post)
+#df_comb= detailed_listings_post
 #amnames = colnames(amenities_df)
 if( "updated_at" %in% colnames(df_comb)){
   df_comb$created_at = ymd_hms(df_comb$created_at)}
@@ -59,7 +60,7 @@ mat_dum_sca = scale(mat_dum,
                     center = mins, 
                     scale = maxs - mins)
 set.seed(0)
-#train = sample(1:nrow(df_imp), 7*nrow(df_imp)/10)
+train = sample(1:nrow(df_imp), 7*nrow(df_imp)/10)
 test = (-train)
 y.test = y[test]
 X.train = X[train,]
@@ -216,13 +217,13 @@ df_logistics%>%cor()
  ###Engineering Location Variable
  library(class)
 
- df_loc = data.frame(filter(df_comb, level == 2)$neighborhood)
- df_loc$city = filter(df_comb, level == 2)$city
- df_loc$zipcode = as.factor( filter(df_comb, level == 2)$zipcode)
- df_loc$lat = filter(df_comb, level == 2)$lat
- df_loc$lng = filter(df_comb, level == 2)$lng
- df_loc$rooms = filter(df_comb, level == 2)$rooms
- colnames(df_loc) = c("neighborhood", "city", "zipcode", "rooms")
+ # df_loc = data.frame(filter(df_comb, level == 2)$neighborhood)
+ # df_loc$city = filter(df_comb, level == 2)$city
+ # df_loc$zipcode = as.factor( filter(df_comb, level == 2)$zipcode)
+ # df_loc$lat = filter(df_comb, level == 2)$lat
+ # df_loc$lng = filter(df_comb, level == 2)$lng
+ # df_loc$rooms = filter(df_comb, level == 2)$rooms
+ # colnames(df_loc) = c("neighborhood", "city", "zipcode", "rooms")
 #
 #
 # dummies <- dummyVars(rooms~., data = df_loc)
@@ -288,21 +289,23 @@ abline(0,1)
 
 
 # #  ###Random Forest
-#    library(randomForest)
+    library(randomForest)
+    library(vip)
 # #
     #Fitting an initial random forest to the training subset.
-    # set.seed(0)
-    # rf.listing500 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 100                           )
-    # rf.yhat500 = predict(rf.listing500, newdata = X[test, ])
-    # rf.train.yhat500 = predict(rf.listing500, newdata = X[train, ])
-    # plot(y.test,rf.yhat500)
-    # abline(0,1)
-    # 
-    # rf.r2.500.train = sum((y[train] - rf.train.yhat500)^2)/sum((y[train]-mean(y[train]))^2)
-    # rf.r2.500.test = sum((y[test] - rf.yhat500)^2)/ sum((y.test-mean(y.test))^2)
-    # 
-    # rf.mae500.train = mean(abs(rf.train.yhat500-y[train]))
-    # rf.mae500.test = mean(abs(rf.yhat500-y.test))
+    set.seed(0)
+    rf.listing500 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 100                           )
+    rf.yhat500 = predict(rf.listing500, newdata = X[test, ])
+    rf.train.yhat500 = predict(rf.listing500, newdata = X[train, ])
+    plot(y.test,rf.yhat500)
+    abline(0,1)
+
+    rf.r2.500.train = sum((y[train] - rf.train.yhat500)^2)/sum((y[train]-mean(y[train]))^2)
+    rf.r2.500.test = sum((y[test] - rf.yhat500)^2)/ sum((y.test-mean(y.test))^2)
+
+    rf.mae500.train = mean(abs(rf.train.yhat500-y[train]))
+    rf.mae500.test = mean(abs(rf.yhat500-y.test))
+    vip(rf.listings500, num_features = 30, geom = "point")
 # 
 # rf.listing1000 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 1000                           )
 # rf.yhat1000 = predict(rf.listing1000, newdata = X[test, ])
@@ -468,104 +471,104 @@ abline(0,1)
 #    plot(nn)
 #    
       ###Model Stack
-    library(h2o)
-    h2o.init(max_mem_size = "5g")
-    n.h2o <- colnames(mat_dum)
-    colnames(mat_dum) = gsub(" ", ".", n.h2o)
-    n <- colnames(mat_dum)
-    colnames(mat_dum) = gsub("'", "", n.h2o)
-    mat_dum_h2o = as.h2o(mat_dum)
-    y_names = "y"
-    X_names = setdiff(names(mat_dum_h2o), y)
-    list_split <- h2o.splitFrame(data = mat_dum_h2o, ratios = 0.8, seed = 0)
-    h2o.train <- list_split[[1]]
-    h2o.valid <- list_split[[2]]
-#
-#   # Train & cross-validate a lasso model
-   best_lasso <- h2o.glm(
-     x = X_names, y = y_names, training_frame = h2o.train, alpha = 1,
-     remove_collinear_columns = TRUE, nfolds = 10, lambda = 21.37017,
-     stopping_metric = "MAE", fold_assignment = "Modulo",
-     keep_cross_validation_predictions = TRUE, seed = 0, standardize = TRUE
-   )
-   results.lasso.train = h2o.performance(best_lasso, newdata = h2o.train)
-   results.lasso.valid = h2o.performance(best_lasso, newdata = h2o.valid)
-
-   best_ridge <- h2o.glm(
-     x = X_names, y = y_names, training_frame = h2o.train, alpha = 0,
-     remove_collinear_columns = TRUE, nfolds = 10, lambda = 756,
-     stopping_metric = "MAE", fold_assignment = "Modulo",
-     keep_cross_validation_predictions = TRUE, seed = 0, standardize = TRUE
-   )
-   results.ridge.train = h2o.performance(best_ridge, newdata = h2o.train)
-   results.ridge.valid = h2o.performance(best_ridge, newdata = h2o.valid)
-
-   # Train & cross-validate a RF model
-   best_rf <- h2o.randomForest(
-     x = X_names, y = y_names, training_frame = h2o.train,
-     validation_frame = h2o.valid, ntrees = 500,
-     max_depth = 0, min_rows = 1, nfolds = 10,
-     fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
-     seed = 0, stopping_rounds = 50, stopping_metric = "MAE",
-     stopping_tolerance = 0
-   )
-   results.rf.train = h2o.performance(best_rf, newdata = h2o.train)
-   results.rf.valid = h2o.performance(best_rf, newdata = h2o.valid)
-
-   # Train & cross-validate a GBM model
-   best_gbm <- h2o.gbm(
-     x = X_names, y = y_names, training_frame = h2o.train, ntrees = 200, learn_rate = 0.01,
-     max_depth = 0, min_rows = 1, nfolds = 10,
-     fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
-     seed = 0, stopping_rounds = 50, stopping_metric = "MAE",
-     stopping_tolerance = 0
-   )
-   results.gbm.train = h2o.performance(best_gbm, newdata = h2o.train)
-   results.gbm.valid = h2o.performance(best_gbm, newdata = h2o.valid)
-#
-  #
-  #   # Train & cross-validate an XGBoost model
-  #   best_xgb <- h2o.xgboost(
-  #     x = X, y = Y, training_frame = train_h2o, ntrees = 5000, learn_rate = 0.05,
-  #     max_depth = 3, min_rows = 3, sample_rate = 0.8, categorical_encoding = "Enum",
-  #     nfolds = 10, fold_assignment = "Modulo",
-  #     keep_cross_validation_predictions = TRUE, seed = 0, stopping_rounds = 50,
-  #     stopping_metric = "RMSE", stopping_tolerance = 0
-  #   )
-  #
-ensemble_tree_drf <- h2o.stackedEnsemble(
-  x = X_names, y = y_names, training_frame = h2o.train, model_id = "my_tree_ensemble",
-  base_models = list(best_lasso, best_ridge, best_gbm, best_rf),
-  metalearner_algorithm = "drf"
-)
-results.train_drf = h2o.performance(ensemble_tree_drf, newdata = h2o.train)
-results.valid_drf = h2o.performance(ensemble_tree_drf, newdata = h2o.valid)
-
-ensemble_tree_beyes <- h2o.stackedEnsemble(
-  x = X_names, y = y_names, training_frame = h2o.train, model_id = "my_tree_ensemble",
-  base_models = list(best_lasso, best_ridge, best_gbm, best_rf),
-  metalearner_algorithm = "naivebayes"
-)
-results.train_beyes = h2o.performance(ensemble_tree_beyes, newdata = h2o.train)
-results.valid_beyes = h2o.performance(ensemble_tree_beyes, newdata = h2o.valid)
-
-ensemble_tree_auto <- h2o.stackedEnsemble(
-  x = X_names, y = y_names, training_frame = h2o.train, model_id = "my_tree_ensemble",
-  base_models = list(best_lasso, best_ridge, best_gbm, best_rf),
-  metalearner_algorithm = "auto"
-)
-results.train_auto = h2o.performance(ensemble_tree_auto, newdata = h2o.train)
-results.valid_auto = h2o.performance(ensemble_tree_auto, newdata = h2o.valid)
-
-
-ensemble_tree_gbm <- h2o.stackedEnsemble(
-  x = X_names, y = y_names, training_frame = h2o.train, model_id = "my_tree_ensemble",
-  base_models = list(best_lasso, best_ridge, best_gbm, best_rf),
-  metalearner_algorithm = "gbm"
-)
-results.train_auto = h2o.performance(ensemble_tree_gbm, newdata = h2o.train)
-results.valid_auto = h2o.performance(ensemble_tree_gbm, newdata = h2o.valid)
-#   h2o.partialPlot(object = ensemble_tree, data = mat_dum_h2o, cols = c("bedrooms",
+#     library(h2o)
+#     h2o.init(max_mem_size = "5g")
+#     n.h2o <- colnames(mat_dum)
+#     colnames(mat_dum) = gsub(" ", ".", n.h2o)
+#     n <- colnames(mat_dum)
+#     colnames(mat_dum) = gsub("'", "", n.h2o)
+#     mat_dum_h2o = as.h2o(mat_dum)
+#     y_names = "y"
+#     X_names = setdiff(names(mat_dum_h2o), y)
+#     list_split <- h2o.splitFrame(data = mat_dum_h2o, ratios = 0.8, seed = 0)
+#     h2o.train <- list_split[[1]]
+#     h2o.valid <- list_split[[2]]
+# #
+# #   # Train & cross-validate a lasso model
+#    best_lasso <- h2o.glm(
+#      x = X_names, y = y_names, training_frame = h2o.train, alpha = 1,
+#      remove_collinear_columns = TRUE, nfolds = 10, lambda = 21.37017,
+#      stopping_metric = "MAE", fold_assignment = "Modulo",
+#      keep_cross_validation_predictions = TRUE, seed = 0, standardize = TRUE
+#    )
+#    results.lasso.train = h2o.performance(best_lasso, newdata = h2o.train)
+#    results.lasso.valid = h2o.performance(best_lasso, newdata = h2o.valid)
+# 
+#    best_ridge <- h2o.glm(
+#      x = X_names, y = y_names, training_frame = h2o.train, alpha = 0,
+#      remove_collinear_columns = TRUE, nfolds = 10, lambda = 756,
+#      stopping_metric = "MAE", fold_assignment = "Modulo",
+#      keep_cross_validation_predictions = TRUE, seed = 0, standardize = TRUE
+#    )
+#    results.ridge.train = h2o.performance(best_ridge, newdata = h2o.train)
+#    results.ridge.valid = h2o.performance(best_ridge, newdata = h2o.valid)
+# 
+#    # Train & cross-validate a RF model
+#    best_rf <- h2o.randomForest(
+#      x = X_names, y = y_names, training_frame = h2o.train,
+#      validation_frame = h2o.valid, ntrees = 500,
+#      max_depth = 0, min_rows = 1, nfolds = 10,
+#      fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
+#      seed = 0, stopping_rounds = 50, stopping_metric = "MAE",
+#      stopping_tolerance = 0
+#    )
+#    results.rf.train = h2o.performance(best_rf, newdata = h2o.train)
+#    results.rf.valid = h2o.performance(best_rf, newdata = h2o.valid)
+# 
+#    # Train & cross-validate a GBM model
+#    best_gbm <- h2o.gbm(
+#      x = X_names, y = y_names, training_frame = h2o.train, ntrees = 200, learn_rate = 0.01,
+#      max_depth = 0, min_rows = 1, nfolds = 10,
+#      fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
+#      seed = 0, stopping_rounds = 50, stopping_metric = "MAE",
+#      stopping_tolerance = 0
+#    )
+#    results.gbm.train = h2o.performance(best_gbm, newdata = h2o.train)
+#    results.gbm.valid = h2o.performance(best_gbm, newdata = h2o.valid)
+# #
+#   #
+#   #   # Train & cross-validate an XGBoost model
+#   #   best_xgb <- h2o.xgboost(
+#   #     x = X, y = Y, training_frame = train_h2o, ntrees = 5000, learn_rate = 0.05,
+#   #     max_depth = 3, min_rows = 3, sample_rate = 0.8, categorical_encoding = "Enum",
+#   #     nfolds = 10, fold_assignment = "Modulo",
+#   #     keep_cross_validation_predictions = TRUE, seed = 0, stopping_rounds = 50,
+#   #     stopping_metric = "RMSE", stopping_tolerance = 0
+#   #   )
+#   #
+# ensemble_tree_drf <- h2o.stackedEnsemble(
+#   x = X_names, y = y_names, training_frame = h2o.train, model_id = "my_tree_ensemble",
+#   base_models = list(best_lasso, best_ridge, best_gbm, best_rf),
+#   metalearner_algorithm = "drf"
+# )
+# results.train_drf = h2o.performance(ensemble_tree_drf, newdata = h2o.train)
+# results.valid_drf = h2o.performance(ensemble_tree_drf, newdata = h2o.valid)
+# 
+# ensemble_tree_beyes <- h2o.stackedEnsemble(
+#   x = X_names, y = y_names, training_frame = h2o.train, model_id = "my_tree_ensemble",
+#   base_models = list(best_lasso, best_ridge, best_gbm, best_rf),
+#   metalearner_algorithm = "naivebayes"
+# )
+# results.train_beyes = h2o.performance(ensemble_tree_beyes, newdata = h2o.train)
+# results.valid_beyes = h2o.performance(ensemble_tree_beyes, newdata = h2o.valid)
+# 
+# ensemble_tree_auto <- h2o.stackedEnsemble(
+#   x = X_names, y = y_names, training_frame = h2o.train, model_id = "my_tree_ensemble",
+#   base_models = list(best_lasso, best_ridge, best_gbm, best_rf),
+#   metalearner_algorithm = "auto"
+# )
+# results.train_auto = h2o.performance(ensemble_tree_auto, newdata = h2o.train)
+# results.valid_auto = h2o.performance(ensemble_tree_auto, newdata = h2o.valid)
+# 
+# 
+# ensemble_tree_gbm <- h2o.stackedEnsemble(
+#   x = X_names, y = y_names, training_frame = h2o.train, model_id = "my_tree_ensemble",
+#   base_models = list(best_lasso, best_ridge, best_gbm, best_rf),
+#   metalearner_algorithm = "gbm"
+# )
+# results.train_auto = h2o.performance(ensemble_tree_gbm, newdata = h2o.train)
+# results.valid_auto = h2o.performance(ensemble_tree_gbm, newdata = h2o.valid)
+# #   h2o.partialPlot(object = ensemble_tree, data = mat_dum_h2o, cols = c("bedrooms",
 #                                                                        "y") )
 #   
 #   #https://bradleyboehmke.github.io/HOML/regularized-regression.html

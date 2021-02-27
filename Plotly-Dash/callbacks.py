@@ -136,18 +136,18 @@ def update_amenity_ale(value):
                    )
     return fig
 
-# @app.callback(
-#     Output('example', 'src'),
-#     #Output('ale', 'children'),
-#     [Input('numerical_types', 'value')])
-# def update_amenity_ale(amenity_checkbox_ale):
-#     buf = io.BytesIO()
-#     plot = ale_plot(model=stack,train_set= df.drop(["occupancy", "rental_income"], axis =1),
-#          features= 'bedrooms',
-#          bins=20, 
-#          monte_carlo=True).get_figure().savefig(buf, format='png')
-#     data = base64.b64encode(buf.getbuffer()).decode("utf8") # encode to html elements
-#     return "data:image/png;base64,{}".format(data)
+@app.callback(
+    Output('example', 'src'),
+    #Output('ale', 'children'),
+    [Input('numerical_types', 'value')])
+def update_amenity_ale(amenity_checkbox_ale):
+    buf = io.BytesIO()
+    plot = ale_plot(model=stack,train_set= df.drop(["occupancy", "rental_income"], axis =1),
+         features= 'bedrooms',
+         bins=20, 
+         monte_carlo=True).get_figure().savefig(buf, format='png')
+    data = base64.b64encode(buf.getbuffer()).decode("utf8") # encode to html elements
+    return "data:image/png;base64,{}".format(data)
 
     
 

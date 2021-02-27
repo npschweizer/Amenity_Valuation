@@ -5,7 +5,7 @@ We define the layouts and callbacks for each page in different files
 """
 from dash import Dash
 from dash.dependencies import Input, Output
-from layouts import homepage_layout, correlation_layout, sidebar_layout, CONTENT_STYLE
+from layouts import homepage_layout, predictor_layout, sidebar_layout, CONTENT_STYLE
 from os import path
 from app import app
 import dash_core_components as dcc
@@ -24,8 +24,8 @@ app.layout = html.Div([dcc.Location(id="url"), sidebar_layout,
 def render_page_content(pathname):
     if pathname == '/':
         return homepage_layout
-    elif pathname == "/correlation":
-        return correlation_layout
+    elif pathname == "/predictor":
+        return predictor_layout
     # If the user tries to reach a different page, return a 404 message
     return dbc.Jumbotron(
         [
@@ -38,11 +38,11 @@ def render_page_content(pathname):
 # Save all the parameters of the pages for easy accessing
 PAGES = [
     {'children': 'Home', 'href': '/', 'id': 'home'},
-    {'children': 'Correlation', 'href': '/correlation', 'id': 'correlation-page'}
+    {'children': 'Predictor', 'href': '/predictor', 'id': 'predictor'}
 ]
 
 # this callback uses the current pathname to set the active state of the
-# corresponding nav link to true, allowing users to tell see page they are on
+# corresponding nav link to true, allowing users to see page they are on
 @app.callback(
     [Output(page.get('id'), "active") for page in PAGES],
     [Input("url", "pathname")],

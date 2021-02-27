@@ -9,11 +9,12 @@ import pandas as pd
 import numpy as np
 import pandas as pd
 import time
-from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
 from typing import Dict, Callable
 import matplotlib.pyplot as plt
 import pickle
 from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.impute import KNNImputer
 
 class Models:
 
@@ -27,7 +28,6 @@ class Models:
 
     def fit(self, xTrain, xTest, yTrain, yTest):
            print('Starting ', self.name)
-
            self.model.fit(xTrain,yTrain)
            self.modelCV = self.model
            self.train_R2 = r2_score(yTrain, self.model.predict(xTrain))
@@ -35,9 +35,9 @@ class Models:
            self.train_MAE = mean_absolute_error(yTrain, self.model.predict(xTrain))
            self.test_MAE = mean_absolute_error(yTest, self.model.predict(xTest))
 
-    def fitCV(self,xTrain, xTest, yTrain, yTest, cv=2, scoring = 'neg_mean_absolute_error'):
+    def fitCV(self,xTrain, xTest, yTrain, yTest, cv=8, scoring = 'neg_mean_absolute_error'):
            print('Starting ', self.name)
-
+           
 
            grid = GridSearchCV(self.model, self.hyperparams, cv=cv, return_train_score = False, n_jobs=-1, scoring=scoring)
            self.modelCV = grid.fit(xTrain,yTrain)
@@ -102,30 +102,35 @@ class Models:
     def assembleModels(self):
            models = {
            'Linear'     : Models(LinearRegression(n_jobs=-1), 'Linear'),
-           'Ridge'      :  Models(Ridge(normalize = True), 'Ridge', {'alpha': np.linspace(.001,1,100)}),
-           'Lasso'      :  Models(Lasso(alpha = 1,tol = 0.00001, max_iter = 10000, normalize = True), 'Lasso', {'alpha': np.linspace(.001,1,100)}),
-           'Elastic Net':  Models(ElasticNet(), 'ElasticNet', {'alpha': np.linspace(.001,1,100), 'l1_ratio': np.linspace(0, 1, 10)}),
+           'Ridge'      :  Models(Ridge(normalize = True), 'Ridge', {'alpha': np.linspace(.001,100,1000)}),
+           'Lasso'      :  Models(Lasso(alpha = 1,tol = 0.00001, max_iter = 10000, normalize = True), 'Lasso', {'alpha': np.linspace(.001,100,1000)}),
+           'Elastic Net':  Models(ElasticNet(), 'ElasticNet', {'alpha': np.linspace(.001,100,1000), 'l1_ratio': np.linspace(0, 1, 10)}),
 
-            'Random Forest': Models(RandomForestRegressor(n_jobs=-1), 'Random Forest',
+           'Random Forest': Models(RandomForestRegressor(n_jobs=-1), 'Random Forest',
                         {'n_estimators': range(100, 1000, 300),
                         "max_features":["auto", "sqrt", "log2"],
                         "max_depth": range(1, 15, 4)}),
     
-            'Gradient Boost': Models(GradientBoostingRegressor(), 'Gradient Boost',
+           'Gradient Boost': Models(GradientBoostingRegressor(), 'Gradient Boost',
                        {'learning_rate': np.linspace(.001, 0.1, 10),
                         'n_estimators': range(100, 1000, 300),
                         "max_features":["auto", "sqrt", "log2"],
                         "max_depth": range(1, 15, 4),
-                        'loss': ['ls', 'lad']}), # use feature_importances for feature selection
-    
-            'SVM': Models(SVR(), 'Support Vector Regressor',
-                       {'C': np.linspace(1, 10, 3),
-                        'gamma': ['scale','auto'],
-                        'kernel': ['linear']})
+                        'loss': ['ls']}), # use feature_importances for feature selection
+
+            #'SVM': Models(SVR(), 'Support Vector Regressor',
+            #           {'C': np.linspace(1, 10, 3),
+            #            'gamma': ['scale','auto'],
+            #            'kernel': ['linear']})
             #Regression((), ''),
             #Regression((), ''),
            }
-           return models
+           imputer=KNNImputer()
+
+           pipelines = {}
+           for i in models:
+              pipelines[str(i)] = Pipeline(steps=[('imputer', imputer), ('model', self.model)])
+           return pipelines
 
     def getExecutionTime(self, fun: Callable):
         start_time = time.time()
@@ -145,21 +150,22 @@ class Models:
         print(timeString,'\n')
         return timeString, returnValue   
 
-    def performRegressions(self, df: pd.DataFrame, random_state = 0, test_size = .2, target = 'rental_income', drop = 'Null'):
+    def performRegressions(self, df: pd.DataFrame, random_state = 0, test_size = .2, target = 'rental_income', drop = ['Null']):
            models = self.assembleModels()
            self.random_state = random_state
            self.test_size = test_size
            self.drop = drop
            self.target = target
            y = df[self.target]
-           print(df.columns)
+           #print(df.columns)
            
-           if drop == "Null":
+           if drop == 'Null':
                X = df.drop(target, axis=1)
+               print(*X.columns, sep="\n")
            else:
                X = df.drop(target, axis=1)
                X = X.drop(drop, axis=1)
-            
+               #print(*X.columns, sep="\n")
            trainTestData = train_test_split(X, y, test_size=self.test_size, random_state= self.random_state)
 
 
@@ -172,10 +178,9 @@ class Models:
            models['Ridge'].time,          returnValue = self.getExecutionTime(lambda: models['Ridge'].fitCV(*trainTestData))
            models['Lasso'].time,          returnValue = self.getExecutionTime(lambda: models['Lasso'].fitCV(*trainTestData))
            models['Elastic Net'].time,    returnValue = self.getExecutionTime(lambda: models['Elastic Net'].fitCV(*trainTestData))
-
            models['Random Forest'].time,  returnValue = self.getExecutionTime(lambda: models['Random Forest'].fitCV(*trainTestData))
            models['Gradient Boost'].time, returnValue = self.getExecutionTime(lambda: models['Gradient Boost'].fitCV(*trainTestData))
-           models['SVM'].time,            returnValue = self.getExecutionTime(lambda: models['SVM'].fitCV(*trainTestData))
+           #models['SVM'].time,            returnValue = self.getExecutionTime(lambda: models['SVM'].fitCV(*trainTestData))
 
            results = pd.DataFrame([r.__dict__ for r in models.values()]).drop(columns=['model', 'modelCV'] )
 
