@@ -9,7 +9,7 @@ server <- function(input, output, session) {
   })
   
   
-  output$spartial <-renderPlot({
+  output$s11 <-renderPlot({
     partial(rf.listing500, pred.var = as.character(input$amenity), plot = TRUE, train = X,  plot.engine = "ggplot2")
     #X[X[, "bedrooms"] == 2,]
     })

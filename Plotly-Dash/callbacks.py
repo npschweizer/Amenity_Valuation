@@ -1,6 +1,7 @@
 '''
 Define all the callbacks on each page
 '''
+import plotly.graph_objects as go
 import base64
 import matplotlib.pyplot as plt
 import io
@@ -16,14 +17,13 @@ from sklearn.inspection import plot_partial_dependence
 from mlxtend.regressor import StackingCVRegressor
 from alepython import ale_plot
 pd.set_option('display.max_columns', None)
-# Read the picked data frame from the project folder
-df = pd.read_pickle("app.data")
-df_amenity = pd.read_pickle("ammenity.data")
-
+df = pd.read_pickle("model_data.data")
+df_amenity = pd.read_pickle("amenity.data")
+pd.options.display.max_seq_items = None
+print(df.columns)
 stack= pickle.load(open('ridge_ri.sav', 'rb'))
 stackO= pickle.load(open('finalized_model_o.sav', 'rb'))
 df_ud = pd.read_csv("l2_detailed_listings.csv", encoding = "UTF-8")
-#print('Hello world!')
 CARD_KEYS = ['Rental Income', 'Occupancy']
 Amenity_Names = df_amenity.columns.tolist()
 NUMERICAL_TYPES = df_ud.columns.tolist()
@@ -38,8 +38,52 @@ if 'Laptop friendly workspace' in NUMERICAL_TYPES:
 NUMERICAL_TYPES.remove("cancellation_policy")
 NUMERICAL_TYPES.remove("property_type")
 NUMERICAL_TYPES.remove("instant_book_enabled")
+#print(NUMERICAL_TYPES)
+####Homepage main feature plots
 
-#print(NUMERICAL_TYPES) 
+#Histogram
+@app.callback(
+    Output('main-features-histogram', 'src'),
+    #Output('ale', 'children'),
+    [Input('numerical_types', 'value')])
+def update_amenity_ale(value):
+    fig = px.histogram(df_ud, x=value,
+                   title=str('Distribution of ' + value),
+                   labels={'total_bill':'total bill'}, # can specify one label per df column
+                   opacity=0.8,
+                   log_y=True, # represent bars with log scale
+                   color_discrete_sequence=['indianred'] # color of histogram bars
+                   )
+    return fig
+
+#ALE Plot
+@app.callback(
+    Output('example', 'src'),
+     #Output('ale', 'children'),
+    [Input('numerical_types', 'value')])
+def update_amenity_ale(amenity_checkbox_ale):
+    buf = io.BytesIO()
+    plot = ale_plot(model=stack,train_set= df.drop(["occupancy", "rental_income"], axis =1),
+         features= 'bedrooms',
+         bins=20, 
+         monte_carlo=True).get_figure().savefig(buf, format='png')
+    data = base64.b64encode(buf.getbuffer()).decode("utf8") # encode to html elements
+    return "data:image/png;base64,{}".format(data)
+
+#Amenity pages
+@app.callback(
+    Output('amenity-histogram', 'figure'),
+    [Input('numerical_types', 'value')])
+def update_amenity_hist(value):
+    return px.histogram(df_ud, x="price",
+                   title=str('Distribution of ' + value),
+                   color= str(value),
+                   labels={'total_bill':'total bill'}, # can specify one label per df column
+                   opacity=0.8,
+                   marginal="violin",
+                   color_discrete_sequence=px.colors.qualitative.Bold # color of histogram bars
+                   )
+    #return fig.show()
 
 #Occupancy and Rental_Income Outputs
 @app.callback(
@@ -52,15 +96,13 @@ NUMERICAL_TYPES.remove("instant_book_enabled")
     Input('submit-button', 'n_clicks'),
     [Input("{}".format(_), 'value') for _ in NUMERICAL_TYPES])
 def update_card_value(amenity_checkbox,property_type,cancellation_policy, neighborhood,instant_book_enabled, *vals):
-    pred = pd.DataFrame(np.zeros((1,len(df.columns.drop("occupancy")))),columns=df.drop("occupancy",axis=1).columns)
+    pred = pd.DataFrame(np.zeros((1,len(df.columns.drop(["rental_income","occupancy"])))),columns=df.drop(["rental_income","occupancy"],axis=1).columns)
     ri=np.median(df.rental_income)
     for i in df_ud.cancellation_policy.unique():
         if i in cancellation_policy:
             pred[str('cancellation_policy__' + i)] = 1
-            #print(pred[str('property_type__' + i)])
         else:
             pred[str('cancellation_policy__' + i)] = 0
-            #print(pred[str('property_type__' + i)])
     if instant_book_enabled =="True":
         pred['instant_book_enabled__True'] = 1
         pred['instant_book_enabled__False'] = 0
@@ -70,20 +112,14 @@ def update_card_value(amenity_checkbox,property_type,cancellation_policy, neighb
     for i in df_ud.property_type.unique():
         if i in property_type:
             pred[str('property_type__' + i)] = 1
-            #print(pred[str('property_type__' + i)])
         else:
             pred[str('property_type__' + i)] = 0
-            #print(pred[str('property_type__' + i)])
-    #print(df_ud.neighborhood.unique())
     for i in df_ud.neighborhood.unique():
         if i in neighborhood:
             pred[str('neighborhood__' + i)] = 1
-            #print(pred[str('neighborhood__' + neighborhood)])
         else:
             pred[str('neighborhood__' + i)] = 0
-            #print(pred[str('neighborhood__' + neighborhood)])
     for i in range(len(NUMERICAL_TYPES)):
-        #print(vals[i])
         if vals[i] != "":
             pred[NUMERICAL_TYPES[i]] = vals[i]
     for i in df_amenity.columns:
@@ -91,11 +127,19 @@ def update_card_value(amenity_checkbox,property_type,cancellation_policy, neighb
             pred[i] = 1
         else:
             pred[i] = 0
-    print(pred)
+    #print(pred)
     pred.fillna(0, inplace=True)
-    #print(stack.predict(pred.iloc[0]))
-    #ri = stack.predict(pred.iloc[0])
-    return str(pred)
+    #print(stack.predict(pred))
+    ri = stack.predict(pred)
+    return dash_table.DataTable(
+        id='ri-table',
+        columns=[{"name": i, "id": i} 
+                 for i in pred.columns],
+        data=pred.to_dict('records'),
+        style_cell=dict(textAlign='left'),
+        style_header=dict(backgroundColor="paleturquoise"),
+        style_data=dict(backgroundColor="lavender")
+    )
 
 @app.callback(
     Output('Occupancy', 'children'),
@@ -122,32 +166,8 @@ def update_card_value(amenity_checkbox, neighborhood, *vals):
     #ri = stack.predict(pred.iloc[0])
     return str(oc)
 
-@app.callback(
-    Output('main-features-histogram', 'src'),
-    #Output('ale', 'children'),
-    [Input('numerical_types', 'value')])
-def update_amenity_ale(value):
-    fig = px.histogram(df_ud, x=value,
-                   title=str('Distribution of ' + value),
-                   labels={'total_bill':'total bill'}, # can specify one label per df column
-                   opacity=0.8,
-                   log_y=True, # represent bars with log scale
-                   color_discrete_sequence=['indianred'] # color of histogram bars
-                   )
-    return fig
 
-@app.callback(
-    Output('example', 'src'),
-    #Output('ale', 'children'),
-    [Input('numerical_types', 'value')])
-def update_amenity_ale(amenity_checkbox_ale):
-    buf = io.BytesIO()
-    plot = ale_plot(model=stack,train_set= df.drop(["occupancy", "rental_income"], axis =1),
-         features= 'bedrooms',
-         bins=20, 
-         monte_carlo=True).get_figure().savefig(buf, format='png')
-    data = base64.b64encode(buf.getbuffer()).decode("utf8") # encode to html elements
-    return "data:image/png;base64,{}".format(data)
+
 
     
 

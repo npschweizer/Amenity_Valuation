@@ -9,7 +9,7 @@ from mlxtend.regressor import StackingRegressor
 import pickle
 import pandas as pd
 import numpy as np
-X = pd.read_pickle("app.data")
+X = pd.read_pickle("model_data.data")
 
 imputer=KNNImputer()
 mlr=LinearRegression()

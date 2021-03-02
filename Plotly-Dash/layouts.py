@@ -2,8 +2,10 @@
 Define the layouts of each page/url
 '''
 import dash_core_components as dcc
+import dash_table
 import dash_bootstrap_components as dbc
 import dash_html_components as html
+import plotly.express as px
 from callbacks import df, df_amenity, df_ud, stack, stackO, NUMERICAL_TYPES  # import the df loaded from callbacks so we don't need to load it again
 from alepython import ale_plot
 import pandas as pd
@@ -49,6 +51,41 @@ homepage_layout = html.Div(
                 ]
 )
 
+amenities_layout = html.Div(
+                [
+                    dbc.Row(
+                        [
+                            dbc.Col([        
+                                html.H6(
+                                    'Amenity Distributions',
+                                        style={'text-align': 'center'}
+                                ),
+                                dcc.Dropdown(
+                                    id='amenity_dist',
+                                    options=
+                                        [{"label": amenity, "value": amenity} for amenity in df_amenity.columns]
+                                    ,
+                                    value='Dishwasher',
+                                    multi = False,
+                                    persistence = True,
+                                ),
+                                dcc.Graph(id="amenity-histogram"),
+                                #html.Img(id='example')
+                            ]),
+                            dbc.Col(dcc.Markdown([
+                                "##### Content\n",
+                                "Cntent.\n",
+                            ])),
+                        ]
+                    ),
+                    dbc.Row([
+                        dbc.Col(
+                            #ale_plot(model=stack,train_set= df.drop(["occupancy", "rental_income"], axis =1),features= 'listing_weekend_price_native',bins=20, monte_carlo=True)
+                            )]
+                        )
+                ]
+)
+
 # the style arguments for the sidebar. We use position:fixed and a fixed width
 # this allows us to have the sidebar unmoved on the left side of the page
 SIDEBAR_STYLE = {
@@ -64,6 +101,7 @@ SIDEBAR_STYLE = {
 # save all the parameters of the pages for easy accessing
 PAGES = [
     {'children': 'Home', 'href': '/', 'id': 'home'},
+    {'children': 'Amenities', 'href': '/amenities', 'id': 'amenities'},
     {'children': 'Predictor', 'href': '/predictor', 'id': 'predictor'}
 ]
 
@@ -248,6 +286,13 @@ predictor_layout = html.Div(children=[
                     type="number",
                     debounce=True, placeholder="Debounce True"
                 ),
+                html.H6("Number of Properties Hosted",
+                    style={'text-align': 'justify'}),
+                dcc.Input(
+                    id="Property Count", 
+                    type="number",
+                    debounce=True, placeholder="Debounce True"
+                ),
             ]),
             dbc.Col([
                 html.H6("Minimum Nights per Stay",
@@ -308,6 +353,7 @@ predictor_layout = html.Div(children=[
         html.Hr(),
         dbc.Row(
             [
+            dash_table.DataTable(id='ri-table'),
             dbc.Card(dbc.CardBody(
                 [
                 html.H5("Rental Income"),
