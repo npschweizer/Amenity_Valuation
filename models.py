@@ -97,26 +97,39 @@ class Models:
                plt.legend(loc=4)
                plt.savefig('Output/'+str(i)+' - '+self.name+' '+name+' MAE.png')
                plt.clf()
+#Pipeline(steps=[('imputer', imputer = KNNImputer()), ('model', self.model)])
 
-    #@staticmethod
     def assembleModels(self):
            models = {
-           'Linear'     : Models(LinearRegression(n_jobs=-1), 'Linear'),
-           'Ridge'      :  Models(Ridge(normalize = True), 'Ridge', {'alpha': np.linspace(.001,100,1000)}),
-           'Lasso'      :  Models(Lasso(alpha = 1,tol = 0.00001, max_iter = 10000, normalize = True), 'Lasso', {'alpha': np.linspace(.001,100,1000)}),
-           'Elastic Net':  Models(ElasticNet(), 'ElasticNet', {'alpha': np.linspace(.001,100,1000), 'l1_ratio': np.linspace(0, 1, 10)}),
-
-           'Random Forest': Models(RandomForestRegressor(n_jobs=-1), 'Random Forest',
-                        {'n_estimators': range(100, 1000, 300),
-                        "max_features":["auto", "sqrt", "log2"],
-                        "max_depth": range(1, 15, 4)}),
-    
-           'Gradient Boost': Models(GradientBoostingRegressor(), 'Gradient Boost',
-                       {'learning_rate': np.linspace(.001, 0.1, 10),
-                        'n_estimators': range(100, 1000, 300),
-                        "max_features":["auto", "sqrt", "log2"],
-                        "max_depth": range(1, 15, 4),
-                        'loss': ['ls']}), # use feature_importances for feature selection
+           'Linear'     :  Models(
+                           Pipeline(steps=[('imputer', KNNImputer()), ('Linear', LinearRegression(n_jobs=-1))]),
+                           'Linear'),
+           'Ridge'      :  Models(
+                           Pipeline(steps=[('imputer', KNNImputer()), ('Ridge', Ridge(normalize = True))]),
+                           'Ridge', 
+                           {'Ridge__alpha': np.linspace(.001,100,100)}),
+           'Lasso'      :  Models(
+                           Pipeline(steps=[('imputer', KNNImputer()), ('Lasso', Lasso(alpha = 1,tol = 0.00001, max_iter = 10000, normalize = True))]), 
+                           'Lasso', 
+                           {'Lasso__alpha': np.linspace(.001,100,100)}),
+           'ElasticNet':  Models(
+                           Pipeline(steps=[('imputer', KNNImputer()), ('ElasticNet', ElasticNet())]),
+                           'ElasticNet', 
+                           {'ElasticNet__alpha': np.linspace(.001,100,100), 'ElasticNet__l1_ratio': np.linspace(0, 1, 10)}),
+           'RandomForestRegressor': Models(
+                           Pipeline(steps=[('imputer', KNNImputer()), ('RandomForestRegressor',RandomForestRegressor(n_jobs=-1))]),
+                           'RandomForestRegressor',
+                           {'RandomForestRegressor__n_estimators': range(100, 1000, 300),
+                            "RandomForestRegressor__max_features":["auto", "sqrt", "log2"],
+                            "RandomForestRegressor__max_depth": range(1, 15, 4)}),
+           'GradientBoostingRegressor': Models(
+                           Pipeline(steps=[('imputer', KNNImputer()), ('GradientBoostingRegressor', GradientBoostingRegressor())]),
+                           'GradientBoostingRegressor',
+                           {'GradientBoostingRegressor__learning_rate': np.linspace(.001, 0.1, 1),
+                           'GradientBoostingRegressor__n_estimators': range(100, 1000, 300),
+                           "GradientBoostingRegressor__max_features":["auto", "sqrt", "log2"],
+                           "GradientBoostingRegressor__max_depth": range(1, 15, 4),
+                           'GradientBoostingRegressor__loss': ['ls']}), # use feature_importances for feature selection
 
             #'SVM': Models(SVR(), 'Support Vector Regressor',
             #           {'C': np.linspace(1, 10, 3),
@@ -125,12 +138,11 @@ class Models:
             #Regression((), ''),
             #Regression((), ''),
            }
-           imputer=KNNImputer()
 
-           pipelines = {}
-           for i in models:
-              pipelines[str(i)] = Pipeline(steps=[('imputer', imputer), ('model', self.model)])
-           return pipelines
+           # pipelines = {}
+           # for i in models:
+           #    pipelines[str(i)] = Pipeline(steps=[('imputer', imputer = KNNImputer()), ('model', self.model)])
+           return models
 
     def getExecutionTime(self, fun: Callable):
         start_time = time.time()
@@ -177,9 +189,9 @@ class Models:
            models['Linear'].time,         returnValue = self.getExecutionTime(lambda: models['Linear'].fit(*trainTestData))
            models['Ridge'].time,          returnValue = self.getExecutionTime(lambda: models['Ridge'].fitCV(*trainTestData))
            models['Lasso'].time,          returnValue = self.getExecutionTime(lambda: models['Lasso'].fitCV(*trainTestData))
-           models['Elastic Net'].time,    returnValue = self.getExecutionTime(lambda: models['Elastic Net'].fitCV(*trainTestData))
-           models['Random Forest'].time,  returnValue = self.getExecutionTime(lambda: models['Random Forest'].fitCV(*trainTestData))
-           models['Gradient Boost'].time, returnValue = self.getExecutionTime(lambda: models['Gradient Boost'].fitCV(*trainTestData))
+           models['ElasticNet'].time,    returnValue = self.getExecutionTime(lambda: models['ElasticNet'].fitCV(*trainTestData))
+           models['RandomForestRegressor'].time,  returnValue = self.getExecutionTime(lambda: models['RandomForestRegressor'].fitCV(*trainTestData))
+           models['GradientBoostingRegressor'].time, returnValue = self.getExecutionTime(lambda: models['GradientBoostingRegressor'].fitCV(*trainTestData))
            #models['SVM'].time,            returnValue = self.getExecutionTime(lambda: models['SVM'].fitCV(*trainTestData))
 
            results = pd.DataFrame([r.__dict__ for r in models.values()]).drop(columns=['model', 'modelCV'] )
