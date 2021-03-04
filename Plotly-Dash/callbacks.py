@@ -10,6 +10,7 @@ from app import app
 import plotly.express as px
 import dash_bootstrap_components as dbc
 import dash_html_components as html
+import dash_table
 import pandas as pd
 import numpy as np
 import pickle
@@ -20,7 +21,7 @@ pd.set_option('display.max_columns', None)
 df = pd.read_pickle("model_data.data")
 df_amenity = pd.read_pickle("amenity.data")
 pd.options.display.max_seq_items = None
-print(df.columns)
+
 stack= pickle.load(open('ridge_ri.sav', 'rb'))
 stackO= pickle.load(open('finalized_model_o.sav', 'rb'))
 df_ud = pd.read_csv("l2_detailed_listings.csv", encoding = "UTF-8")
@@ -120,16 +121,16 @@ def update_card_value(amenity_checkbox,property_type,cancellation_policy, neighb
         else:
             pred[str('neighborhood__' + i)] = 0
     for i in range(len(NUMERICAL_TYPES)):
+        print(str(NUMERICAL_TYPES[i]) + " " + str(vals[i]))
         if vals[i] != "":
             pred[NUMERICAL_TYPES[i]] = vals[i]
+        else:
+            vals[i] = 0 
     for i in df_amenity.columns:
         if i in amenity_checkbox:
             pred[i] = 1
         else:
             pred[i] = 0
-    #print(pred)
-    pred.fillna(0, inplace=True)
-    #print(stack.predict(pred))
     ri = stack.predict(pred)
     return dash_table.DataTable(
         id='ri-table',
