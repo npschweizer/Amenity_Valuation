@@ -299,7 +299,7 @@ df_comb %>%
 One issue I dealt with working with this data set was the sheer number of variables, which you can get a sense of from the corrplot below.
 ```{r multicolinearity, echo = FALSE}
 library(RColorBrewer)
-cc = df_l1%>%
+cc = df_l2%>%
                #filter(level == 2)%>%
                #select(!level)%>%
                #select(!amnames)%>%

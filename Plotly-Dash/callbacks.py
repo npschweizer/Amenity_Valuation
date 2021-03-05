@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 import base64
 import matplotlib.pyplot as plt
 import io
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 from app import app
 import plotly.express as px
 import dash_bootstrap_components as dbc
@@ -21,7 +21,7 @@ pd.set_option('display.max_columns', None)
 df = pd.read_pickle("model_data.data")
 df_amenity = pd.read_pickle("amenity.data")
 pd.options.display.max_seq_items = None
-
+print('w')
 stack= pickle.load(open('ridge_ri.sav', 'rb'))
 stackO= pickle.load(open('finalized_model_o.sav', 'rb'))
 df_ud = pd.read_csv("l2_detailed_listings.csv", encoding = "UTF-8")
@@ -39,7 +39,7 @@ if 'Laptop friendly workspace' in NUMERICAL_TYPES:
 NUMERICAL_TYPES.remove("cancellation_policy")
 NUMERICAL_TYPES.remove("property_type")
 NUMERICAL_TYPES.remove("instant_book_enabled")
-#print(NUMERICAL_TYPES)
+print(NUMERICAL_TYPES)
 ####Homepage main feature plots
 
 #Histogram
@@ -85,20 +85,23 @@ def update_amenity_hist(value):
                    color_discrete_sequence=px.colors.qualitative.Bold # color of histogram bars
                    )
     #return fig.show()
-
+#print("change")
 #Occupancy and Rental_Income Outputs
 @app.callback(
     Output('Rental_Income', 'children'),
+    #[Input('submit-button', 'n_clicks')],
     [Input('amenity_checkbox', 'value')],
     [Input('cancellation_policy', 'value')],
     [Input('property_type', 'value')],
     [Input('neighborhood', 'value')],
     [Input('instant_book_enabled', 'value')],
-    Input('submit-button', 'n_clicks'),
     [Input("{}".format(_), 'value') for _ in NUMERICAL_TYPES])
-def update_card_value(amenity_checkbox,property_type,cancellation_policy, neighborhood,instant_book_enabled, *vals):
+def update_card_value(amenity_checkbox,cancellation_policy,property_type, neighborhood,instant_book_enabled, *vals):
     pred = pd.DataFrame(np.zeros((1,len(df.columns.drop(["rental_income","occupancy"])))),columns=df.drop(["rental_income","occupancy"],axis=1).columns)
+    #pred = pd.DataFrame(columns=df.drop(["rental_income","occupancy"],axis=1).columns)
+    #pred.append(pd.Series(), ignore_index=True)
     ri=np.median(df.rental_income)
+    print(vals)
     for i in df_ud.cancellation_policy.unique():
         if i in cancellation_policy:
             pred[str('cancellation_policy__' + i)] = 1
@@ -132,15 +135,16 @@ def update_card_value(amenity_checkbox,property_type,cancellation_policy, neighb
         else:
             pred[i] = 0
     ri = stack.predict(pred)
-    return dash_table.DataTable(
-        id='ri-table',
-        columns=[{"name": i, "id": i} 
-                 for i in pred.columns],
-        data=pred.to_dict('records'),
-        style_cell=dict(textAlign='left'),
-        style_header=dict(backgroundColor="paleturquoise"),
-        style_data=dict(backgroundColor="lavender")
-    )
+    return ri
+    # return dash_table.DataTable(
+    #     id='ri-table',
+    #     columns=[{"name": i, "id": i} 
+    #              for i in pred.columns],
+    #     data=pred.to_dict('records'),
+    #     style_cell=dict(textAlign='left'),
+    #     style_header=dict(backgroundColor="paleturquoise"),
+    #     style_data=dict(backgroundColor="lavender")
+    #)
 
 @app.callback(
     Output('Occupancy', 'children'),

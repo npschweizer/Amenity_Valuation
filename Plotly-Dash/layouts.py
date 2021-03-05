@@ -289,7 +289,7 @@ predictor_layout = html.Div(children=[
                 html.H6("Number of Properties Hosted",
                     style={'text-align': 'justify'}),
                 dcc.Input(
-                    id="Property Count", 
+                    id="property_count", 
                     type="number",
                     debounce=True, placeholder="Debounce True"
                 ),
@@ -344,10 +344,10 @@ predictor_layout = html.Div(children=[
                     type="number",
                     debounce=True, placeholder="Debounce True"
                 ),
-                html.Button(
-                    id='submit-button', 
-                    n_clicks=0, 
-                    children='Submit'),
+                #html.Button(
+                #    id='submit-button', 
+                #    n_clicks=0, 
+                #    children='Submit'),
             ]),
         ]),
         html.Hr(),
