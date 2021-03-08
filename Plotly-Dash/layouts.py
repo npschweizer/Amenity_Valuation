@@ -7,7 +7,6 @@ import dash_bootstrap_components as dbc
 import dash_html_components as html
 import plotly.express as px
 from callbacks import df, df_amenity, df_ud, stack, stackO, NUMERICAL_TYPES  # import the df loaded from callbacks so we don't need to load it again
-from alepython import ale_plot
 import pandas as pd
 pd.set_option('display.max_columns', None)
 # the layout of homepage
@@ -28,24 +27,17 @@ homepage_layout = html.Div(
                                     multi = False,
                                     persistence = True,
                                 ),
-                                dcc.Graph(id="main-features-histogram"),
-                                html.Img(id='example')
                             ]),
                             dbc.Col(dcc.Markdown([
-                                "##### Correlation Coefficients between Daily Cases and Mobility\n",
-                                "It is the number that describes how people reacted to the reported daily cases "\
-                                    "in the previous days. It takes values between -1 and 1. A positive value indicates that "\
-                                        "as the reported daily cases increased, people's mobility decreased in the following day.\n",
-                                "##### Data resources\n",
-                                "[Google COVID-19 Community Mobility Reports](https://www.google.com/covid19/mobility/index.html?hl=en)\n",
-                                "[John Hopkins Daily Reports](https://github.com/CSSEGISandData/COVID-19)\n",
-                                "[New York Times COVID-19 Reports](https://github.com/nytimes/covid-19-data)"
+                                "##### Main Feature Distributions\n",
+                                "The plot below displays the distribution of the feature you select in the dropdown.\n"
+                                "You can use it to get a sense of how many properties exist at your point in the dataset.\n "
                             ])),
                         ]
                     ),
                     dbc.Row([
                         dbc.Col(
-                            #ale_plot(model=stack,train_set= df.drop(["occupancy", "rental_income"], axis =1),features= 'listing_weekend_price_native',bins=20, monte_carlo=True)
+                            dcc.Graph(id="main-features-histogram"),                            
                             )]
                         )
                 ]
@@ -57,7 +49,7 @@ amenities_layout = html.Div(
                         [
                             dbc.Col([        
                                 html.H6(
-                                    'Amenity Distributions',
+                                    'Select Amenity',
                                         style={'text-align': 'center'}
                                 ),
                                 dcc.Dropdown(
@@ -69,18 +61,18 @@ amenities_layout = html.Div(
                                     multi = False,
                                     persistence = True,
                                 ),
-                                dcc.Graph(id="amenity-histogram"),
                                 #html.Img(id='example')
                             ]),
                             dbc.Col(dcc.Markdown([
-                                "##### Content\n",
-                                "Cntent.\n",
+                                "##### Amenity Distributions\n",
+                                "The histogram below indicates how many listings at a given price bucket have the amenity you select.\n",
+                                "1 indicates that an amenity is present and 0 indicates that it's absent."
                             ])),
                         ]
                     ),
                     dbc.Row([
                         dbc.Col(
-                            #ale_plot(model=stack,train_set= df.drop(["occupancy", "rental_income"], axis =1),features= 'listing_weekend_price_native',bins=20, monte_carlo=True)
+                            dcc.Graph(id="amenity-histogram"),
                             )]
                         )
                 ]
@@ -204,56 +196,56 @@ predictor_layout = html.Div(children=[
                 dcc.Input(
                     id="price", 
                     type="number",
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="20" 
                 ),
                 html.H6("Weekend Price",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="listing_weekend_price_native", 
                     type="number",
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
                 html.H6("Cleaning Fee",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="cleaning_fee_native", 
                     type="number",
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
                 html.H6("Weekly Discount",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="weekly_price_factor", 
                     type="number",
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
                 html.H6("Monthly Discount",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="monthly_price_factor", 
                     type="number",
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
                 html.H6("Security Deposit",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="security_deposit_native", 
                     type="number",
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
                 html.H6("Number of Guests Included",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="guests_included", 
                     type="number",
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
                 html.H6("Fee for Additional Guests (per person)",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="price_for_extra_person_native", 
                     type="number",
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),    
             ]),
             dbc.Col([
@@ -262,14 +254,14 @@ predictor_layout = html.Div(children=[
                 dcc.Input(
                     id="beds", 
                     type="number",
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
                 html.H6("Bathrooms",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="bathrooms", 
                     type="number",
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
                 html.H6("Bedrooms",
                     style={'text-align': 'justify'}),
@@ -277,21 +269,21 @@ predictor_layout = html.Div(children=[
                     id="bedrooms", 
                     type="number",
                     max=4,
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
                 html.H6("Maximum Guest Capacity",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="person_capacity", 
                     type="number",
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
                 html.H6("Number of Properties Hosted",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="property_count", 
                     type="number",
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
             ]),
             dbc.Col([
@@ -300,7 +292,7 @@ predictor_layout = html.Div(children=[
                 dcc.Input(
                     id="min_nights", 
                     type="number",
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
                 html.H6("# of Reviews",
                     style={'text-align': 'justify'}
@@ -308,7 +300,7 @@ predictor_layout = html.Div(children=[
                 dcc.Input(
                     id="reviews_count", 
                     type="number",
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
                 html.H6("# of Pictures",
                     style={'text-align': 'justify'}
@@ -316,7 +308,7 @@ predictor_layout = html.Div(children=[
                 dcc.Input(
                     id="picture_count", 
                     type="number",
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
                 html.H6("Check In Time",
                     style={'text-align': 'justify'}
@@ -325,7 +317,7 @@ predictor_layout = html.Div(children=[
                     id="check_in_time", 
                     type="number",
                     max=23.5,
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
                 html.H6("Check Out Time",
                     style={'text-align': 'justify'}
@@ -334,7 +326,7 @@ predictor_layout = html.Div(children=[
                     id="check_out_time", 
                     type="number",
                     max=23.5,
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
                 html.H6("Star Rating",
                     style={'text-align': 'justify'}
@@ -342,7 +334,7 @@ predictor_layout = html.Div(children=[
                 dcc.Input(
                     id="star_rating", 
                     type="number",
-                    debounce=True, placeholder="Debounce True"
+                    debounce=True, placeholder="0"
                 ),
                 #html.Button(
                 #    id='submit-button', 

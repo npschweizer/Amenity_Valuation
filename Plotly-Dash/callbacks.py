@@ -14,15 +14,16 @@ import dash_table
 import pandas as pd
 import numpy as np
 import pickle
+from eli5 import explain_prediction
+from eli5.formatters.html import format_as_html
 from sklearn.inspection import plot_partial_dependence
 from mlxtend.regressor import StackingCVRegressor
-from alepython import ale_plot
 pd.set_option('display.max_columns', None)
 df = pd.read_pickle("model_data.data")
 df_amenity = pd.read_pickle("amenity.data")
 pd.options.display.max_seq_items = None
 print('w')
-stack= pickle.load(open('ridge_ri.sav', 'rb'))
+stack= pickle.load(open('finalized_model_ri.sav', 'rb'))
 stackO= pickle.load(open('finalized_model_o.sav', 'rb'))
 df_ud = pd.read_csv("l2_detailed_listings.csv", encoding = "UTF-8")
 CARD_KEYS = ['Rental Income', 'Occupancy']
@@ -44,44 +45,44 @@ print(NUMERICAL_TYPES)
 
 #Histogram
 @app.callback(
-    Output('main-features-histogram', 'src'),
+    Output('main-features-histogram', 'figure'),
     #Output('ale', 'children'),
     [Input('numerical_types', 'value')])
 def update_amenity_ale(value):
-    fig = px.histogram(df_ud, x=value,
+    return px.histogram(df, x=value,
                    title=str('Distribution of ' + value),
-                   labels={'total_bill':'total bill'}, # can specify one label per df column
+                   #labels={'total_bill':'total bill'}, # can specify one label per df column
                    opacity=0.8,
-                   log_y=True, # represent bars with log scale
-                   color_discrete_sequence=['indianred'] # color of histogram bars
+                   #log_y=True, # represent bars with log scale
+                   color_discrete_sequence=px.colors.qualitative.Bold # color of histogram bars
                    )
-    return fig
+
 
 #ALE Plot
-@app.callback(
-    Output('example', 'src'),
-     #Output('ale', 'children'),
-    [Input('numerical_types', 'value')])
-def update_amenity_ale(amenity_checkbox_ale):
-    buf = io.BytesIO()
-    plot = ale_plot(model=stack,train_set= df.drop(["occupancy", "rental_income"], axis =1),
-         features= 'bedrooms',
-         bins=20, 
-         monte_carlo=True).get_figure().savefig(buf, format='png')
-    data = base64.b64encode(buf.getbuffer()).decode("utf8") # encode to html elements
-    return "data:image/png;base64,{}".format(data)
+# @app.callback(
+#     Output('example', 'src'),
+#      #Output('ale', 'children'),
+#     [Input('numerical_types', 'value')])
+# def update_amenity_ale(amenity_checkbox_ale):
+#     buf = io.BytesIO()
+#     plt.plot([1, 2, 3, 4])
+#     plt.ylabel('some numbers')
+#     plt.get_figure().savefig(buf, format='png')
+#     data = base64.b64encode(buf.getbuffer()).decode("utf8") # encode to html elements
+#     return "data:image/png;base64,{}".format(data)
 
 #Amenity pages
 @app.callback(
     Output('amenity-histogram', 'figure'),
-    [Input('numerical_types', 'value')])
+    [Input('amenity_dist', 'value')])
 def update_amenity_hist(value):
     return px.histogram(df_ud, x="price",
-                   title=str('Distribution of ' + value),
+                   title=str('Percent Distribution of ' + value),
                    color= str(value),
-                   labels={'total_bill':'total bill'}, # can specify one label per df column
+                   #labels={'total_bill':'total bill'}, # can specify one label per df column
                    opacity=0.8,
                    marginal="violin",
+                   #histnorm='percent',
                    color_discrete_sequence=px.colors.qualitative.Bold # color of histogram bars
                    )
     #return fig.show()
@@ -89,7 +90,6 @@ def update_amenity_hist(value):
 #Occupancy and Rental_Income Outputs
 @app.callback(
     Output('Rental_Income', 'children'),
-    #[Input('submit-button', 'n_clicks')],
     [Input('amenity_checkbox', 'value')],
     [Input('cancellation_policy', 'value')],
     [Input('property_type', 'value')],
@@ -124,27 +124,28 @@ def update_card_value(amenity_checkbox,cancellation_policy,property_type, neighb
         else:
             pred[str('neighborhood__' + i)] = 0
     for i in range(len(NUMERICAL_TYPES)):
-        print(str(NUMERICAL_TYPES[i]) + " " + str(vals[i]))
-        if vals[i] != "":
+        if vals[i] != None:
             pred[NUMERICAL_TYPES[i]] = vals[i]
         else:
-            vals[i] = 0 
+            pred[NUMERICAL_TYPES[i]] = 0
+        print(str(NUMERICAL_TYPES[i]) + " " + str(vals[i]))
     for i in df_amenity.columns:
         if i in amenity_checkbox:
             pred[i] = 1
         else:
             pred[i] = 0
+    feature_names=df.drop(["rental_income", "occupancy"], axis=1).columns.tolist()
     ri = stack.predict(pred)
-    return ri
-    # return dash_table.DataTable(
-    #     id='ri-table',
-    #     columns=[{"name": i, "id": i} 
-    #              for i in pred.columns],
-    #     data=pred.to_dict('records'),
-    #     style_cell=dict(textAlign='left'),
-    #     style_header=dict(backgroundColor="paleturquoise"),
-    #     style_data=dict(backgroundColor="lavender")
-    #)
+    print(ri)
+    #pred.iloc[0]=stack.named_steps['imputer'].transform(pred)
+    #for i in range(len(NUMERICAL_TYPES)):
+    #    print(str(NUMERICAL_TYPES[i]) + " " + str(vals[i]))
+    #print(pred)
+    #fig=eli5.explain_prediction(stack.named_steps['R'], pred.iloc[-1], top=20, feature_names = feature_names)
+    print(format_as_html(explain_prediction(stack.named_steps['R'], pred.iloc[0], top=20, feature_names = feature_names)))
+    return ri#, format_as_html(explain_prediction(stack.named_steps['R'], pred.iloc[0], top=20, feature_names = feature_names))
+
+
 
 @app.callback(
     Output('Occupancy', 'children'),
@@ -172,55 +173,12 @@ def update_card_value(amenity_checkbox, neighborhood, *vals):
     return str(oc)
 
 
-
-
-    
-
-    # dbc.Card(dbc.CardBody(
-    #      [
-    #          html.H5("Rental Income"),
-    #          html.P("Predicted Rental Income: " + str(ri),
-    #          ),
-    #      ]
-    #  ), color= "success")
-
-# @app.callback(
-#     [Output('line_chart', 'figure'),
-#      Output('trend_chart', 'figure')],
-#     [Input('state-dropdown', 'value')])
-# def display_line_chart(value):
-
-
-#     features = ['beds']
-#     partial_ri = plot_partial_dependence(stack,     
-#                 X=df.drop(["occupancy"], axis = 1), # raw predictors data.
-#                 features=features, # column numbers of plots we want to show
-#                 #feature_names=['Distance', 'Landsize', 'BuildingArea'], # labels on graphs
-#                  grid_resolution=10) # number of values to plot on x axis
-#     partial_O = plot_partial_dependence(stackO,     
-#                                    X=df.drop(["rental_income", "occupancy"], axis = 1), # raw predictors data.
-#                                    features=features, # column numbers of plots we want to show
-#                                    #feature_names=['Distance', 'Landsize', 'BuildingArea'], # labels on graphs
-#                                    grid_resolution=10) # number of values to plot on x axis
-#     state_df = df.loc[df.state==value].copy()
-#     state_df['new_cases'] = state_df['cases'].diff()
-#     state_df['new_deaths'] = state_df['deaths'].diff()
-#     return partial_ri, \
-#            partial_O \
-
-
-#     [Output(key +'_card', 'children') for key in CARD_KEYS],
-#     [Input('state-dropdown', 'value')])
-# def update_card_value(value):
-#     state_df = df.loc[df.state==value].copy()
-#     state_df['new_cases'] = state_df['cases'].diff()
-#     state_df['new_deaths'] = state_df['deaths'].diff()
-#     correlations = state_df.corr().loc[:'residential', 'new_cases']
-#     return [dbc.Card(dbc .CardBody(
-#         [
-#             html.H5(key.title(), className="card-title"),
-#             html.P("Correlation: " + str(correlations[key]), className="card-text",
-#             ),
-#         ]
-#     ), color="danger" if correlations[key] < 0 else "success") for key in CARD_KEYS]
-
+    #dash_table.DataTable(
+    #     id='ri-table',
+    #     columns=[{"name": i, "id": i} 
+    #              for i in pred.columns],
+    #     data=pred.to_dict('records'),
+    #     style_cell=dict(textAlign='left'),
+    #     style_header=dict(backgroundColor="paleturquoise"),
+    #     style_data=dict(backgroundColor="lavender")
+    #)
