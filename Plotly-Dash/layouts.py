@@ -36,8 +36,9 @@ homepage_layout = html.Div(
                         ]
                     ),
                     dbc.Row([
-                        dbc.Col(
-                            dcc.Graph(id="main-features-histogram"),                            
+                        dbc.Col([
+                            dcc.Graph(id="main-features-histogram"),   
+                            html.Img(id='ICE')]                         
                             )]
                         )
                 ]
@@ -196,7 +197,7 @@ predictor_layout = html.Div(children=[
                 dcc.Input(
                     id="price", 
                     type="number",
-                    debounce=True, placeholder="20" 
+                    debounce=True, placeholder="0" 
                 ),
                 html.H6("Weekend Price",
                     style={'text-align': 'justify'}),
@@ -345,19 +346,20 @@ predictor_layout = html.Div(children=[
         html.Hr(),
         dbc.Row(
             [
-            dash_table.DataTable(id='ri-table'),
             dbc.Card(dbc.CardBody(
                 [
                 html.H5("Rental Income"),
                 html.P("Predicted Rental Income: "),
-                html.Div(id='Rental_Income')
+                html.Div(id='Rental_Income'),
+                dcc.Loading(html.Div(id='income-table')),
                 ]
             )),
             dbc.Card(dbc.CardBody(
                 [
                 html.H5("Occupancy"),
                 html.P("Predicted Occupancy: "),
-                html.Div(id='Occupancy')
+                html.Div(id='Occupancy'),
+                dcc.Loading(html.Div(id="occupancy-table"))
                 ]
             )),
             ],

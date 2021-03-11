@@ -16,6 +16,7 @@ import numpy as np
 import pickle
 from eli5 import explain_prediction
 from eli5.formatters.html import format_as_html
+from eli5.formatters.as_dataframe import format_as_dataframe
 from sklearn.inspection import plot_partial_dependence
 from mlxtend.regressor import StackingCVRegressor
 pd.set_option('display.max_columns', None)
@@ -59,17 +60,25 @@ def update_amenity_ale(value):
 
 
 #ALE Plot
-# @app.callback(
-#     Output('example', 'src'),
-#      #Output('ale', 'children'),
-#     [Input('numerical_types', 'value')])
-# def update_amenity_ale(amenity_checkbox_ale):
-#     buf = io.BytesIO()
-#     plt.plot([1, 2, 3, 4])
-#     plt.ylabel('some numbers')
-#     plt.get_figure().savefig(buf, format='png')
-#     data = base64.b64encode(buf.getbuffer()).decode("utf8") # encode to html elements
-#     return "data:image/png;base64,{}".format(data)
+@app.callback(
+    Output('ICE', 'src'),
+     #Output('ale', 'children'),
+    [Input('numerical_types', 'value')])
+def update_amenity_ale(value):
+    buf = io.BytesIO()
+    plt.plot_partial_dependence(stack,     
+        X=df.drop(["occupancy", "rental_income"], axis = 1), # raw predictors data.
+            features=[str(value)],
+            #ax=ax,# column numbers of plots we want to show
+            kind='individual'
+            #feature_names=['Distance', 'Landsize', 'BuildingArea'], # labels on graphs
+            #grid_resolution=10,
+            ) # number of values to plot on x axis
+    #plot([1, 2, 3, 4])
+    plt.ylabel('some numbers')
+    plt.get_figure().savefig(buf, format='png')
+    data = base64.b64encode(buf.getbuffer()).decode("utf8") # encode to html elements
+    return "data:image/png;base64,{}".format(data)
 
 #Amenity pages
 @app.callback(
@@ -88,8 +97,9 @@ def update_amenity_hist(value):
     #return fig.show()
 #print("change")
 #Occupancy and Rental_Income Outputs
-@app.callback(
+@app.callback([
     Output('Rental_Income', 'children'),
+    Output('income-table', 'children')],
     [Input('amenity_checkbox', 'value')],
     [Input('cancellation_policy', 'value')],
     [Input('property_type', 'value')],
@@ -98,8 +108,6 @@ def update_amenity_hist(value):
     [Input("{}".format(_), 'value') for _ in NUMERICAL_TYPES])
 def update_card_value(amenity_checkbox,cancellation_policy,property_type, neighborhood,instant_book_enabled, *vals):
     pred = pd.DataFrame(np.zeros((1,len(df.columns.drop(["rental_income","occupancy"])))),columns=df.drop(["rental_income","occupancy"],axis=1).columns)
-    #pred = pd.DataFrame(columns=df.drop(["rental_income","occupancy"],axis=1).columns)
-    #pred.append(pd.Series(), ignore_index=True)
     ri=np.median(df.rental_income)
     print(vals)
     for i in df_ud.cancellation_policy.unique():
@@ -140,45 +148,87 @@ def update_card_value(amenity_checkbox,cancellation_policy,property_type, neighb
     #pred.iloc[0]=stack.named_steps['imputer'].transform(pred)
     #for i in range(len(NUMERICAL_TYPES)):
     #    print(str(NUMERICAL_TYPES[i]) + " " + str(vals[i]))
-    #print(pred)
     #fig=eli5.explain_prediction(stack.named_steps['R'], pred.iloc[-1], top=20, feature_names = feature_names)
-    print(format_as_html(explain_prediction(stack.named_steps['R'], pred.iloc[0], top=20, feature_names = feature_names)))
-    return ri#, format_as_html(explain_prediction(stack.named_steps['R'], pred.iloc[0], top=20, feature_names = feature_names))
+    exp=format_as_dataframe(explain_prediction(stack.named_steps['R'], pred.iloc[0], top=20, feature_names = feature_names))
+    print(exp)
+    exp = dash_table.DataTable(
+         id='ri-table',
+         columns=[{"name": i, "id": i} 
+                  for i in exp.columns],
+         data=exp.to_dict('records'),
+         style_cell=dict(textAlign='left'),
+         style_header=dict(backgroundColor="paleturquoise"),
+         style_data=dict(backgroundColor="lavender")
+    )
+    print(exp)
+    return ri, exp
 
 
+    #, format_as_html(explain_prediction(stack.named_steps['R'], pred.iloc[0], top=20, feature_names = feature_names))
 
-@app.callback(
+
+@app.callback([
     Output('Occupancy', 'children'),
+    Output('occupancy-table', 'children')],
     [Input('amenity_checkbox', 'value')],
+    [Input('cancellation_policy', 'value')],
+    [Input('property_type', 'value')],
     [Input('neighborhood', 'value')],
+    [Input('instant_book_enabled', 'value')],
     [Input("{}".format(_), 'value') for _ in NUMERICAL_TYPES])
-def update_card_value(amenity_checkbox, neighborhood, *vals):
-    pred = pd.DataFrame(columns=df.columns)
-    pred.append(pd.Series(), ignore_index=True)
+def update_card_value(amenity_checkbox,cancellation_policy,property_type, neighborhood,instant_book_enabled, *vals):
+    pred = pd.DataFrame(np.zeros((1,len(df.columns.drop(["rental_income","occupancy"])))),columns=df.drop(["rental_income","occupancy"],axis=1).columns)
     oc=np.median(df.occupancy)
+    print(vals)
+    for i in df_ud.cancellation_policy.unique():
+        if i in cancellation_policy:
+            pred[str('cancellation_policy__' + i)] = 1
+        else:
+            pred[str('cancellation_policy__' + i)] = 0
+    if instant_book_enabled =="True":
+        pred['instant_book_enabled__True'] = 1
+        pred['instant_book_enabled__False'] = 0
+    else:
+        pred['instant_book_enabled__True'] = 0
+        pred['instant_book_enabled__False'] = 1
+    for i in df_ud.property_type.unique():
+        if i in property_type:
+            pred[str('property_type__' + i)] = 1
+        else:
+            pred[str('property_type__' + i)] = 0
     for i in df_ud.neighborhood.unique():
         if i in neighborhood:
-            pred.at[0,str('neighborhood__' + neighborhood)] = 1
+            pred[str('neighborhood__' + i)] = 1
         else:
-            pred.at[0,str('neighborhood__' + neighborhood)] = 0
+            pred[str('neighborhood__' + i)] = 0
     for i in range(len(NUMERICAL_TYPES)):
-        pred.at[0,NUMERICAL_TYPES[i]] = vals[i]
+        if vals[i] != None:
+            pred[NUMERICAL_TYPES[i]] = vals[i]
+        else:
+            pred[NUMERICAL_TYPES[i]] = 0
+        print(str(NUMERICAL_TYPES[i]) + " " + str(vals[i]))
     for i in df_amenity.columns:
         if i in amenity_checkbox:
-            pred.at[0,i] = 1
+            pred[i] = 1
         else:
-            pred.at[0,i] = 0
-    #print(stack.predict(pred.iloc[0]))
-    #ri = stack.predict(pred.iloc[0])
-    return str(oc)
-
-
-    #dash_table.DataTable(
-    #     id='ri-table',
-    #     columns=[{"name": i, "id": i} 
-    #              for i in pred.columns],
-    #     data=pred.to_dict('records'),
-    #     style_cell=dict(textAlign='left'),
-    #     style_header=dict(backgroundColor="paleturquoise"),
-    #     style_data=dict(backgroundColor="lavender")
-    #)
+            pred[i] = 0
+    feature_names=df.drop(["rental_income", "occupancy"], axis=1).columns.tolist()
+    oc= stackO.predict(pred)
+    print(oc)
+    #pred.iloc[0]=stack.named_steps['imputer'].transform(pred)
+    #for i in range(len(NUMERICAL_TYPES)):
+    #    print(str(NUMERICAL_TYPES[i]) + " " + str(vals[i]))
+    #fig=eli5.explain_prediction(stack.named_steps['R'], pred.iloc[-1], top=20, feature_names = feature_names)
+    exp=format_as_dataframe(explain_prediction(stackO.named_steps['R'], pred.iloc[0], top=20, feature_names = feature_names))
+    print(exp)
+    exp = dash_table.DataTable(
+         id='oc-table',
+         columns=[{"name": i, "id": i} 
+                  for i in exp.drop(['target', 'value'],axis=1).columns],
+         data=exp.to_dict('records'),
+         style_cell=dict(textAlign='left'),
+         style_header=dict(backgroundColor="paleturquoise"),
+         style_data=dict(backgroundColor="lavender")
+    )
+    print(exp)
+    return oc, exp
