@@ -38,7 +38,7 @@ homepage_layout = html.Div(
                     dbc.Row([
                         dbc.Col([
                             dcc.Graph(id="main-features-histogram"),   
-                            html.Img(id='ICE')]                         
+                            dcc.Loading(html.Img(id='ICE'))]                         
                             )]
                         )
                 ]
@@ -103,8 +103,8 @@ sidebar_layout = html.Div(
     [
         html.Div([
                     dbc.Row([html.H4("Amenity-Shmenity"), 
-                            html.Img(src=('/assets/logo.jpeg'), width=50,
-                                    style={"margin-left": "2rem"})
+                            #html.Img(src=('/assets/logo.jpeg'), width=50,
+                            #        style={"margin-left": "2rem"})
                             ])
                     ]),
         html.Hr(),

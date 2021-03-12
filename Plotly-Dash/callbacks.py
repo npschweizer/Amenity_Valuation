@@ -59,14 +59,14 @@ def update_amenity_ale(value):
                    )
 
 
-#ALE Plot
+#ICE Plot
 @app.callback(
     Output('ICE', 'src'),
      #Output('ale', 'children'),
     [Input('numerical_types', 'value')])
 def update_amenity_ale(value):
     buf = io.BytesIO()
-    plt.plot_partial_dependence(stack,     
+    plot=plot_partial_dependence(stack,     
         X=df.drop(["occupancy", "rental_income"], axis = 1), # raw predictors data.
             features=[str(value)],
             #ax=ax,# column numbers of plots we want to show
@@ -74,9 +74,8 @@ def update_amenity_ale(value):
             #feature_names=['Distance', 'Landsize', 'BuildingArea'], # labels on graphs
             #grid_resolution=10,
             ) # number of values to plot on x axis
-    #plot([1, 2, 3, 4])
-    plt.ylabel('some numbers')
-    plt.get_figure().savefig(buf, format='png')
+    #plt.ylabel('some numbers')
+    plot.figure_.savefig(buf, format='png')
     data = base64.b64encode(buf.getbuffer()).decode("utf8") # encode to html elements
     return "data:image/png;base64,{}".format(data)
 
@@ -94,8 +93,8 @@ def update_amenity_hist(value):
                    #histnorm='percent',
                    color_discrete_sequence=px.colors.qualitative.Bold # color of histogram bars
                    )
-    #return fig.show()
-#print("change")
+
+
 #Occupancy and Rental_Income Outputs
 @app.callback([
     Output('Rental_Income', 'children'),
@@ -154,7 +153,7 @@ def update_card_value(amenity_checkbox,cancellation_policy,property_type, neighb
     exp = dash_table.DataTable(
          id='ri-table',
          columns=[{"name": i, "id": i} 
-                  for i in exp.columns],
+                  for i in exp.drop(['target', 'value'],axis=1).columns],
          data=exp.to_dict('records'),
          style_cell=dict(textAlign='left'),
          style_header=dict(backgroundColor="paleturquoise"),
@@ -163,8 +162,6 @@ def update_card_value(amenity_checkbox,cancellation_policy,property_type, neighb
     print(exp)
     return ri, exp
 
-
-    #, format_as_html(explain_prediction(stack.named_steps['R'], pred.iloc[0], top=20, feature_names = feature_names))
 
 
 @app.callback([

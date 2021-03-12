@@ -18,6 +18,8 @@ setwd("~/Projects/Ammenity_Valuation")
 df_l0 = read.csv("l0_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
 df_l1 = read.csv("l1_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
 df_l2 = read.csv("l2_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
+df_l3 = read.csv("l3_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
+df_l4 = read.csv("l4_detailed_listings.csv", stringsAsFactors = TRUE, header = TRUE)
 df_amenities_pre = read.csv("l0_amenities.csv", stringsAsFactors = TRUE, header = TRUE)
 df_amenities = read.csv("l1_amenities.csv", stringsAsFactors = TRUE, header = TRUE)
 library(dplyr)
@@ -46,19 +48,16 @@ df_l0$updated_at=as.Date(df_l0$updated_at)
 The dataset began with 1497 observations of 283 features, many of which were irrelevant to the project or redundant.
 ```{r data_shape, echo = FALSE}
 print("Column Names")
-colnames(detailed_listings_pre)
+colnames(df_amenities_pre)
 
 ```
 
 Price, rental income, and occupancy all appear to be normally distributed, with obvious outliers. AirBnb is a roomsharing platform for landowners so it may be reasonable to attribute the frequency of occupancy rates between 0 and 25% to owners who don't rent out their properties full-time. Median rental income for a Philadelphia Airbnb over this period was $1610, occupancy was 52%, and price was $104. By comparison, rentcafe.com suggests that mean rent for a single bedroom apartment in Philadelphia is $1660/month. 
-```{r distributions, echo FALSE}
-detailed_listings %>%ggplot(aes(x = rental_income)) + geom_histogram(binwidth = 100)
-detailed_listings %>%ggplot(aes(x = occupancy)) +geom_histogram()
-detailed_listings %>%ggplot(aes(x = price)) + geom_histogram(binwidth = 50)
+```{r distributions, echo =FALSE}
+df_l1 %>%ggplot(aes(x = rental_income)) + geom_histogram(binwidth = 100)
+df_l1 %>%ggplot(aes(x = occupancy)) +geom_histogram()
+df_l1 %>%ggplot(aes(x = price)) + geom_histogram(binwidth = 50)
 
-#median(detailed_listings$rental_income) #1610
-#median(detailed_listings$occupancy) #52
-#median(detailed_listings$price) #104
 ```
 
 The number of properties managed by a host appeared to significantly vary with rental income, although the effect isn't strictly linear. Property count doesn't correlate substantially with any other numerical variable in the dataset and it's introduction appears to dramatically reduce overfit in linear modeling.
@@ -66,25 +65,27 @@ The number of properties managed by a host appeared to significantly vary with r
 df_host = df_l1%>%group_by(host_id)%>%
   summarise(count=n())
 df_l1=left_join(df_l1, df_host, by= "host_id")
+```
 
-df_l1 %>%
-  ggplot(aes(x=count.x, y=rental_income/bedrooms))+
+```{r user_count_plot, echo=FALSE}
+df_l2 %>%
+  ggplot(aes(x=property_count, y=rental_income/bedrooms))+
   geom_smooth() + 
   geom_point()
 
-df_l1 %>%
-  ggplot(aes(x=count.x)) + 
+df_l2 %>%
+  ggplot(aes(x=property_count)) + 
   geom_histogram()
 
-df_l1 %>%
-  ggplot(aes(x=count.x, y=rental_income))+
+df_l2 %>%
+  ggplot(aes(x=property_count, y=rental_income))+
   geom_smooth() + 
   geom_point()
 
-plot(lm(rental_income ~count.x + reviews_count , data=df_l1)) 
+plot(lm(rental_income ~property_count, data=df_l2)) 
 
-df_cort=data.frame(df_l1%>% select_if(is.numeric)%>%cor(use="pairwise.complete.obs"))
-df_cort$count.x
+df_cort=data.frame(df_l2%>% select_if(is.numeric)%>%cor(use="pairwise.complete.obs"))
+df_cort['property_count']
 ```
 
 
@@ -110,8 +111,7 @@ df_l1%>%
       xlim(0,9) +
       scale_x_continuous(breaks=seq(0,9,1))
 
-#partial(rf.listing500, pred.var = "bedrooms",
-#             plot = TRUE, train = X,  plot.engine = "ggplot2")
+
 ```
 
 # Neighborhood and Rental Income
@@ -200,10 +200,10 @@ df_amsums%>%filter(totals< quantile(totals, .25) ) %>%
 ```{r var_amenity_count, echo=FALSE}
 amnames = c()
 for(ams in 1:length(df_amenities)){
-  if(colnames(df_amenities[ams]) %in% colnames(df_comb) ){
+  if(colnames(df_amenities[ams]) %in% colnames(df_l2) ){
   amnames =append(amnames, colnames(df_amenities[ams]))}
 }
-df_comb$amenity_count = rowSums(df_comb[amnames])
+df_l2$amenity_count = rowSums(df_l2[amnames])
 ```
 
 After variance drops I evaluated the number of amenities offered per listing, below. 
@@ -239,7 +239,7 @@ There seems to be a positive relationship between the number of amenities a list
 df_l2 %>%
   #filter(level == 2)%>%
   ggplot(aes(y = amenity_count, 
-             x = rooms)) +
+             x = (bathrooms + bedrooms))) +
   geom_smooth() +
   geom_point(position = "jitter", color = "orange", size = 0.1, stroke = 0, shape = 16)+
  # ylim(0,10000) +
@@ -279,8 +279,8 @@ df_l2 %>%
   ylab("Rental Income") +
   xlab("# of Amenities Offered per Listing")+
   ggtitle("Monthly Rental Income vs # of Amenities per Listing")
-df_comb %>%
-  filter(level == 2)%>%
+df_l2 %>%
+  #filter(level == 2)%>%
   ggplot(aes(y = occupancy, 
              x = amenity_count)) +
   geom_smooth() +
@@ -406,6 +406,7 @@ ccc = ccc[ok, ok]
 
 
 ```
+
 We also see correlations between access-related amenities that correspond to different locations within the listing, suggesting some possible redundancy in listings or that landlords are willing to make their properties more accessible when possible, but possibly unwilling or unable to ensure complete accessibility in many instances.
 ```{r access, echo = FALSE}
 
@@ -448,6 +449,7 @@ ccac = ccac[ok, ok]
               )
 
 ```
+
 Not a lot of relationships here. Everything presumed incidental.
 
 ```{r essentials, echo = FALSE}
@@ -488,8 +490,10 @@ ccco = ccco[ok, ok]
               #addrect = 4
               )
 ```
+
 Lots of obvious relationships in the kitchen - listings with ovens tend to have stoves, cooking basics, microwaves, and refrigerators and there's a strong relationship between microwave and coffee machines. Interestingly, there isn't much of a relationship between listings that offer a Keurig or pour-over coffee and more complete kitchen amenities, suggesting that these may be more frequently offered in listings that offer a small coffee/snack station but not a full-service kitchen, or, alternatively, that owners aren't very specific about the kinds of coffee in their listings.
-```{r kitchen}
+
+```{r kitchen, echo=FALSE}
 
 
 
@@ -530,9 +534,10 @@ cck = cck[ok, ok]
               )
 
 ```
+
 Amenities "Full Kitchen" and "Kitchenette" only apear on listings that also have "Kitchen", suggesting that they are probably modifiers on the "Kitchen" feature.
 
-```{r kit, echo=false}
+```{r kit, echo=TRUE}
 
 df_l1%>%filter(Kitchen == 1)%>%
   summarise(Kitchens=n())
@@ -559,8 +564,8 @@ df_kitchen%>%filter(Kitchenette==1)
 
 ```
 
-The same thing appears to be true for ovens and convection ovens
-```{r oven, echo=false}
+The same thing appears to be true for ovens and convection ovens.
+```{r oven, echo=TRUE}
 
 df_l1%>%filter(Oven == 1)%>%
   summarise(Oven=n())
@@ -573,6 +578,7 @@ df_l1%>%filter(Oven == 1)%>%
   summarise(Ovens=n())
 
 ```
+
 Some obvious correlations in facilities - listings with pools were more likely to have gyms and hottubs. Listings with gyms were less likely to offer free street parking, suggesting that they typically come in larger buildings in the city center where street parking isn't available. 
 
 ```{r fac, echo = FALSE}
@@ -608,8 +614,10 @@ ccf = ccf[ok, ok]
               #addrect = 4
               )
 ```
+
 Unsurprisingly, listings with an exterior space are more likely to own a grill.
-```{r outdoor}
+
+```{r outdoor, echo=FALSE}
 ostring=c("BBQ.grill", "Patio.or.balcony", "Garden.or.backyard")
 
 df_outdoor = df_amenities[(names(df_amenities) %in% ostring)]
@@ -642,7 +650,7 @@ cco = cco[ok, ok]
 
 ```
 
-```{r corr}
+```{r corr, echo=FALSE}
 
 
 threshold <- .7
@@ -650,7 +658,8 @@ cc0 <- cc
 diag(cc0) <- 0
 ok <- apply(abs(cc0) >= threshold, 1, any)
 cc = cc[ok, ok]
-cc
+df_cor=data.frame(cc)
+df_cor
 # 
 #  detailed_listings = detailed_listings %>%
 #    select(star_rating, everything())
@@ -678,24 +687,32 @@ After cleaning less than 1% of the dataset was null/NA. Missing values were impu
 #subset <- t(data.frame(missings$missing))
 #barplot(subset, legend = c("missing"), names.arg=missings$name, beside=TRUE)
 
-misses = colSums(is.na(df_comb%>%filter(level==1)))>0
+l3 = df_l3
+l4 = df_l4
+l3$level=3
+l4$level=4
+
+df_comb=rbind(l3,l4)
+#colSums(is.na(df_l3))
+misses = colSums(is.na(df_comb%>%filter(level==3)))>0
+#df_comb[misses]
 gg_miss_var(df_comb[misses])
 
 levnams = c("Pre-Imputation", "Post-Imputation")
 
 ###Bedrooms
 
-df_comb %>%
-  ggplot(aes(x = bedrooms)) + 
-  geom_histogram() +
-  facet_grid(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation")))+
-  scale_x_continuous(name = "# of Bedrooms", breaks = seq(0,9, 1), limits = c(0,9))
+#df_comb %>%
+#  ggplot(aes(x = bedrooms)) + 
+#  geom_histogram() +
+#  facet_grid(~level, labeller = labeller(level = c('3' = "Pre-Imputation", '4' = "Post-Imputation")))+
+#  scale_x_continuous(name = "# of Bedrooms", breaks = seq(0,9, 1), limits = c(0,9))
 
 ###Cleaning Fee
 df_comb%>%
   ggplot(aes(x = cleaning_fee_native)) + 
   geom_histogram() +
-  facet_wrap(~level,labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
+  facet_wrap(~level,labeller = labeller(level = c('3' = "Pre-Imputation", '4' = "Post-Imputation"))) +
   ggtitle("Distribution of Cleaning Fees")+
   xlim(0,250)
 
@@ -703,7 +720,7 @@ df_comb%>%
 df_comb %>%
   ggplot(aes(x = check_out_time)) + 
   geom_histogram() +
-  facet_wrap(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
+  facet_wrap(~level, labeller = labeller(level = c('3' = "Pre-Imputation", '4' = "Post-Imputation"))) +
   ggtitle("Distribution of Check Out Times") + 
   xlab("Check Out Time (24 Hr)") +
   xlim(0,24)
@@ -716,7 +733,7 @@ df_comb %>%
 df_comb %>%
   ggplot(aes(x = security_deposit_native)) + 
   geom_histogram(binwidth = 10) +
-  facet_wrap(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
+  facet_wrap(~level, labeller = labeller(level = c('3' = "Pre-Imputation", '4' = "Post-Imputation"))) +
   ggtitle("Distribution of Security Deposit Amounts") + 
   xlab("Some Outliers Eliminated") +
   xlim(-5,1000)
@@ -724,7 +741,7 @@ df_comb %>%
 ####Check In Time
 df_comb %>%
   ggplot(aes(x = check_in_time)) + 
-  facet_grid(~ level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
+  facet_grid(~ level, labeller = labeller(level = c('3' = "Pre-Imputation", '4' = "Post-Imputation"))) +
   geom_histogram() +
   ggtitle("Distribution of Check In Time") + 
   xlab("Check In Time")
@@ -735,10 +752,10 @@ df_comb %>%
 
 
 ###Locale
-df_comb %>%
-  ggplot(aes(x = locale)) + 
-  geom_bar(stat = "count") +
-  facet_wrap(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation")))
+#df_comb %>%
+#  ggplot(aes(x = locale)) + 
+#  geom_bar(stat = "count") +
+ # facet_wrap(~level, labeller = labeller(level = c('3' = "Pre-Imputation", '4' = "Post-Imputation")))
 
 #df_comb %>%
 #  group_by(level,locale)%>%
@@ -749,7 +766,7 @@ if( "updated_at" %in% colnames(df_comb)){
 df_comb %>%
   ggplot(aes(x = updated_at)) + 
   geom_freqpoly(stat = "count") +
-  facet_wrap(~level, labeller = labeller(level = c('1' = "Pre-Imputation", '2' = "Post-Imputation"))) +
+  facet_wrap(~level, labeller = labeller(level = c('3' = "Pre-Imputation", '4' = "Post-Imputation"))) +
   ggtitle("Time of Last Update") + 
   xlab("All Dates 2020")}
 
@@ -759,8 +776,7 @@ df_comb %>%
 #ANOVA Drops
 ANOVA testing was used to eliminate zipcode and city on the basis of inadquate variance. "is_location_exact", "description_locale", "require_guest_phone_verification", "instant_bookable" and "require_guest_phone_verification" were dropped for similar reasons.
 
-
-```{r ANOVA_drops, echo = FALSE}
+```{r ANOVA_drops, echo = TRUE}
 summary(aov(rental_income ~ zipcode , data = df_l0)) 
 summary(aov(price ~ zipcode , data = df_l0)) 
 summary(aov(listing_weekend_price_native ~ zipcode , data = df_l0)) 
@@ -817,6 +833,7 @@ summary(aov(occupancy ~ max_nights , data = df_l0))
 ```
 
 In order to improve modeling on non-tree models I dropped amenities with near-zero variance, listed below.
+
 ```{r amdrops, echo = FALSE }
 amdrops_pre = c(colnames(df_amenities_pre)) 
 amdrops = c(colnames(df_amenities))
