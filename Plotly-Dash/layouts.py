@@ -152,6 +152,7 @@ predictor_layout = html.Div(children=[
                             value='University City',
                             clearable=False,
                             style={"width": 100},
+                            persistence = True,
                         ),
                         html.H6("Instant Book Enabled?",
                             style={'text-align': 'left'}),
@@ -162,19 +163,21 @@ predictor_layout = html.Div(children=[
                                 {"label":"False", "value":"False"}],
                             value='True',
                             clearable=False,
-                            style={"width": 100}
+                            style={"width": 100},
+                            persistence = True,
                         ),
                         html.H6("Cancellation Policy",
                             style={'text-align': 'left'}),
                         dcc.Dropdown(
                             id='cancellation_policy',
                             options=
-                                [{"label":cancellation_policy, "value": cancellation_policy} for cancellation_policy in df_ud.cancellation_policy.unique()]
-                            ,
+                                [{"label":cancellation_policy, "value": cancellation_policy} for cancellation_policy in df_ud.cancellation_policy.unique()],
+                            #,
                             value='University City',
                             clearable=False,
                             style={"width": 100},
-                            optionHeight = 50
+                            optionHeight = 50,
+                            persistence = True,
                         ),
                         html.H6("Property Type",
                             style={'text-align': 'left'}),
@@ -185,7 +188,8 @@ predictor_layout = html.Div(children=[
                             ,
                             value='House',
                             clearable=False,
-                            style={"width": 100}
+                            style={"width": 100},
+                            persistence = True,
                         ),
                     ],
                     style={"width": "50%"},
@@ -197,56 +201,64 @@ predictor_layout = html.Div(children=[
                 dcc.Input(
                     id="price", 
                     type="number",
-                    debounce=True, placeholder="0" 
+                    debounce=True, placeholder="0" , 
+                    persistence = True,
                 ),
                 html.H6("Weekend Price",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="listing_weekend_price_native", 
                     type="number",
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),
                 html.H6("Cleaning Fee",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="cleaning_fee_native", 
                     type="number",
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),
                 html.H6("Weekly Discount",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="weekly_price_factor", 
                     type="number",
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),
                 html.H6("Monthly Discount",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="monthly_price_factor", 
                     type="number",
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),
                 html.H6("Security Deposit",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="security_deposit_native", 
                     type="number",
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),
                 html.H6("Number of Guests Included",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="guests_included", 
                     type="number",
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),
                 html.H6("Fee for Additional Guests (per person)",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="price_for_extra_person_native", 
                     type="number",
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),    
             ]),
             dbc.Col([
@@ -255,14 +267,17 @@ predictor_layout = html.Div(children=[
                 dcc.Input(
                     id="beds", 
                     type="number",
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),
                 html.H6("Bathrooms",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="bathrooms", 
                     type="number",
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
+
                 ),
                 html.H6("Bedrooms",
                     style={'text-align': 'justify'}),
@@ -270,21 +285,24 @@ predictor_layout = html.Div(children=[
                     id="bedrooms", 
                     type="number",
                     max=4,
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),
                 html.H6("Maximum Guest Capacity",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="person_capacity", 
                     type="number",
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),
                 html.H6("Number of Properties Hosted",
                     style={'text-align': 'justify'}),
                 dcc.Input(
                     id="property_count", 
                     type="number",
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),
             ]),
             dbc.Col([
@@ -293,7 +311,8 @@ predictor_layout = html.Div(children=[
                 dcc.Input(
                     id="min_nights", 
                     type="number",
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),
                 html.H6("# of Reviews",
                     style={'text-align': 'justify'}
@@ -301,7 +320,8 @@ predictor_layout = html.Div(children=[
                 dcc.Input(
                     id="reviews_count", 
                     type="number",
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),
                 html.H6("# of Pictures",
                     style={'text-align': 'justify'}
@@ -309,7 +329,8 @@ predictor_layout = html.Div(children=[
                 dcc.Input(
                     id="picture_count", 
                     type="number",
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),
                 html.H6("Check In Time",
                     style={'text-align': 'justify'}
@@ -318,7 +339,8 @@ predictor_layout = html.Div(children=[
                     id="check_in_time", 
                     type="number",
                     max=23.5,
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),
                 html.H6("Check Out Time",
                     style={'text-align': 'justify'}
@@ -327,7 +349,8 @@ predictor_layout = html.Div(children=[
                     id="check_out_time", 
                     type="number",
                     max=23.5,
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),
                 html.H6("Star Rating",
                     style={'text-align': 'justify'}
@@ -335,7 +358,8 @@ predictor_layout = html.Div(children=[
                 dcc.Input(
                     id="star_rating", 
                     type="number",
-                    debounce=True, placeholder="0"
+                    debounce=True, placeholder="0",
+                    persistence = True,
                 ),
                 #html.Button(
                 #    id='submit-button', 
