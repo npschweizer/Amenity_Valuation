@@ -1,14 +1,21 @@
 ---
 title: "Overview"
 output:
-  html_document: default
+  word_document: default
   pdf_document: default
+  html_document: default
 ---
+
+As most new AirBnb landlords will tell you, there's a lot of stuff you can buy to try to spruce up your property and almost as many [YouTube personalities](https://www.youtube.com/watch?v=WwsMIChMDfE), [news articles](https://qz.com/810309/you-can-earn-10-more-per-night-on-airbnb-just-by-having-a-hair-dryer/) and [blogs](https://optimizemybnb.com/improve-airbnb-amenities/) telling you to do the same. Even AirBnb has released [analysis](https://www.airbnb.com/resources/hosting-homes/a/the-best-amenities-to-offer-right-now-203) (although no data) to try to help guide landlords trying to decide how or whether to improve their listings.
+
+Motivated by my own frustration with trying to guess what amenities are worth getting, I'm going to try to walk you through some of the factors you might want to consider when preparing your listing for rental. There'll be fancy data science predictions at the end, but I recommend reading the middle stuff since it's pretty useful even if slightly more pedestrian.
+
+
 # Caveats
 
 
 _Dataset sourced from Mashvisor via RapidAPI._
-_This project only contains data on listings for properties rented in their entirety. It does not contain listings for individual rooms or shared rooms._
+_This project only contains data on listings for properties rented in their entirety in the Philadelphia marketplace. It does not contain listings for individual rooms or shared rooms._
 
 
 ```{r setup, include=FALSE}
@@ -69,23 +76,23 @@ df_l1=left_join(df_l1, df_host, by= "host_id")
 
 ```{r user_count_plot, echo=FALSE}
 df_l2 %>%
-  ggplot(aes(x=property_count, y=rental_income/bedrooms))+
+  ggplot(aes(x=Number.of.Properties.Hosted, y=rental_income/Bedrooms))+
   geom_smooth() + 
   geom_point()
 
 df_l2 %>%
-  ggplot(aes(x=property_count)) + 
+  ggplot(aes(x=Number.of.Properties.Hosted)) + 
   geom_histogram()
 
 df_l2 %>%
-  ggplot(aes(x=property_count, y=rental_income))+
+  ggplot(aes(x=Number.of.Properties.Hosted, y=rental_income))+
   geom_smooth() + 
   geom_point()
 
-plot(lm(rental_income ~property_count, data=df_l2)) 
+plot(lm(rental_income ~Number.of.Properties.Hosted, data=df_l2)) 
 
 df_cort=data.frame(df_l2%>% select_if(is.numeric)%>%cor(use="pairwise.complete.obs"))
-df_cort['property_count']
+df_cort['Number.of.Properties.Hosted']
 ```
 
 
@@ -168,7 +175,7 @@ ggplot(data=df_l0, aes(x= created_at, y=occupancy)) +geom_point() +
 ```
 
 
-A number of amenities are available in nearly all properties.
+Some amenities are a lot more common than others. As you can see below, while a few amenities were present in almost every property, most amenities were listed in less than 25% of listings and no small number were available in less than 5% of listings.
 ```{r frequent_amenities, echo = FALSE}
 totals = colSums(df_amenities_pre)
 totalnames = colnames(df_amenities_pre)
@@ -176,14 +183,15 @@ df_amsums = data_frame(totalnames, totals)
 df_amsums = df_amsums%>% arrange(desc(totals))
 df_amsums%>%filter(totals> quantile(totals, .75) ) %>%
   ggplot()+
-  geom_bar(aes(x = reorder(totalnames, desc(totals)), y = (totals/nrow(df_amsums))), stat = "identity") +
+  geom_bar(aes(x = reorder(totalnames, desc(totals)), y = (totals/nrow(df_amsums)/10)), stat = "identity") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  coord_flip()+
   ylab("Percentage of Listings w/ Amenity")+
   xlab("Amenity")
 
 ```
 
-While others were rarely offered, if ever.
+This is a major consideration and something you should consider independent of income predictions - if an amenity is particularly rare or exceedingly common then chances are the my modeling isn't as accurate as I'd like and you'd be skip the fancy data voodoo and simply ask yourself how much more you'd pay to stay in a listing with the item you're thinking about getting. If you wouldn't pay an extra \$20 a night to stay in a listing with a hot tub, then maybe shelling out $5k for one isn't a great investment. Conversely, if you've met a lot of pruny-feet enthusiasts who decry the paucity of suitable listings in Philly, you might be on to something.
 ```{r infrequent_amenities, echo = FALSE}
 totals = colSums(df_amenities_pre)
 totalnames = colnames(df_amenities_pre)
@@ -193,6 +201,7 @@ df_amsums%>%filter(totals< quantile(totals, .25) ) %>%
   ggplot()+
   geom_bar(aes(x = reorder(totalnames, desc(totals)), y = (totals/nrow(df_amsums))), stat = "identity")+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  coord_flip()+
   ylab("Percentage of Listings w/ Amenity") +
   xlab("Amenity")
 
@@ -239,7 +248,7 @@ There seems to be a positive relationship between the number of amenities a list
 df_l2 %>%
   #filter(level == 2)%>%
   ggplot(aes(y = amenity_count, 
-             x = (bathrooms + bedrooms))) +
+             x = (Bathrooms + Bedrooms))) +
   geom_smooth() +
   geom_point(position = "jitter", color = "orange", size = 0.1, stroke = 0, shape = 16)+
  # ylim(0,10000) +
@@ -254,7 +263,7 @@ And, in general, properties that have more amenities appear to charge slightly m
 ```{r price_amenity_count, echo = FALSE}
 df_l2 %>%
   #filter(level == 2)%>%
-  ggplot(aes(y = price, 
+  ggplot(aes(y = Nightly.Price, 
              x = amenity_count)) +
   geom_smooth() +
   geom_point(position = "jitter", size = 0.1, stroke = 0, color = "orange")+
@@ -292,6 +301,8 @@ df_l2 %>%
 #rf.listing500 = randomForest( X[train,] , y[train], importance = TRUE, ntree = 500    
 #partial(rf.listing500, pred.var = "amenity_count",
 #             plot = TRUE, train = X,  plot.engine = "ggplot2")
+
+plot(lm(rental_income ~ amenity_count, data=df_l2))
 
 ```
 
@@ -703,14 +714,14 @@ levnams = c("Pre-Imputation", "Post-Imputation")
 ###Bedrooms
 
 #df_comb %>%
-#  ggplot(aes(x = bedrooms)) + 
+#  ggplot(aes(x = Bedrooms)) + 
 #  geom_histogram() +
 #  facet_grid(~level, labeller = labeller(level = c('3' = "Pre-Imputation", '4' = "Post-Imputation")))+
 #  scale_x_continuous(name = "# of Bedrooms", breaks = seq(0,9, 1), limits = c(0,9))
 
 ###Cleaning Fee
 df_comb%>%
-  ggplot(aes(x = cleaning_fee_native)) + 
+  ggplot(aes(x = Cleaning.Fee)) + 
   geom_histogram() +
   facet_wrap(~level,labeller = labeller(level = c('3' = "Pre-Imputation", '4' = "Post-Imputation"))) +
   ggtitle("Distribution of Cleaning Fees")+
@@ -718,7 +729,7 @@ df_comb%>%
 
 ###Check Out Time
 df_comb %>%
-  ggplot(aes(x = check_out_time)) + 
+  ggplot(aes(x = Check.Out.Time)) + 
   geom_histogram() +
   facet_wrap(~level, labeller = labeller(level = c('3' = "Pre-Imputation", '4' = "Post-Imputation"))) +
   ggtitle("Distribution of Check Out Times") + 
@@ -731,7 +742,7 @@ df_comb %>%
 
 ###Security Deposits
 df_comb %>%
-  ggplot(aes(x = security_deposit_native)) + 
+  ggplot(aes(x = Security.Deposit)) + 
   geom_histogram(binwidth = 10) +
   facet_wrap(~level, labeller = labeller(level = c('3' = "Pre-Imputation", '4' = "Post-Imputation"))) +
   ggtitle("Distribution of Security Deposit Amounts") + 
@@ -740,7 +751,7 @@ df_comb %>%
 
 ####Check In Time
 df_comb %>%
-  ggplot(aes(x = check_in_time)) + 
+  ggplot(aes(x = Check.In.Time)) + 
   facet_grid(~ level, labeller = labeller(level = c('3' = "Pre-Imputation", '4' = "Post-Imputation"))) +
   geom_histogram() +
   ggtitle("Distribution of Check In Time") + 

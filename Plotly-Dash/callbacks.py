@@ -19,6 +19,9 @@ from eli5.formatters.html import format_as_html
 from eli5.formatters.as_dataframe import format_as_dataframe
 from sklearn.inspection import plot_partial_dependence
 from mlxtend.regressor import StackingCVRegressor
+from sklearn.inspection import partial_dependence
+from itertools import compress 
+from itertools import repeat
 pd.set_option('display.max_columns', None)
 df = pd.read_pickle("model_data.data")
 df_amenity = pd.read_pickle("amenity.data")
@@ -41,7 +44,8 @@ if 'Laptop friendly workspace' in NUMERICAL_TYPES:
 NUMERICAL_TYPES.remove("cancellation_policy")
 NUMERICAL_TYPES.remove("property_type")
 NUMERICAL_TYPES.remove("instant_book_enabled")
-print(NUMERICAL_TYPES)
+
+
 ####Homepage main feature plots
 
 #Histogram
@@ -60,32 +64,58 @@ def update_amenity_ale(value):
 
 
 #ICE Plot
+# @app.callback(
+#     Output('ICE', 'src'),
+#      #Output('ale', 'children'),
+#     [Input('numerical_types', 'value')])
+# def update_amenity_ale(value):
+#     buf = io.BytesIO()
+#     plot=plot_partial_dependence(stack,     
+#         X=df.drop(["occupancy", "rental_income"], axis = 1), # raw predictors data.
+#             features=[str(value)],
+#             #ax=ax,# column numbers of plots we want to show
+#             kind='individual'
+#             #feature_names=['Distance', 'Landsize', 'BuildingArea'], # labels on graphs
+#             #grid_resolution=10,
+#             ) # number of values to plot on x axis
+#     #plt.ylabel('some numbers')
+#     plot.figure_.savefig(buf, format='png')
+#     data = base64.b64encode(buf.getbuffer()).decode("utf8") # encode to html elements
+#     return "data:image/png;base64,{}".format(data)
 @app.callback(
-    Output('ICE', 'src'),
-     #Output('ale', 'children'),
-    [Input('numerical_types', 'value')])
-def update_amenity_ale(value):
-    buf = io.BytesIO()
-    plot=plot_partial_dependence(stack,     
-        X=df.drop(["occupancy", "rental_income"], axis = 1), # raw predictors data.
-            features=[str(value)],
-            #ax=ax,# column numbers of plots we want to show
-            kind='individual'
-            #feature_names=['Distance', 'Landsize', 'BuildingArea'], # labels on graphs
-            #grid_resolution=10,
-            ) # number of values to plot on x axis
-    #plt.ylabel('some numbers')
-    plot.figure_.savefig(buf, format='png')
-    data = base64.b64encode(buf.getbuffer()).decode("utf8") # encode to html elements
-    return "data:image/png;base64,{}".format(data)
+    Output('ICE', 'figure'),
+    [Input('numerical_types', 'value')],
+    [Input('ICE_target', 'value')])
+def update_amenity_ale(numerical_types, ICE_target):
+    mask = np.random.choice([False, True], df.shape[0], p=[0.95, 0.05])
+    graph_df=df[mask]
+    if ICE_target == 'rental_income':
+        model=stack
+    else:
+        model=stackO
+    plot = partial_dependence(model,     
+        X=graph_df.drop(["occupancy", "rental_income"], axis = 1), # raw predictors data.
+        features=[numerical_types],
+        #ax=ax,# column numbers of plots we want to show
+        kind='individual',
+        #feature_names=str(numerical_types), # labels on graphs
+        #grid_resolution=10,
+        ) # number of values to plot on x axis
+    fig=px.line(x=plot['values'][0].tolist(), y=plot.individual[0].tolist(), 
+                color_discrete_sequence= px.colors.qualitative.Antique,
+                title=str(' Individual Conditional Effects Plot for ' + numerical_types + ' Feature'))
+    fig.update_layout(showlegend=False,
+        xaxis_title=str(numerical_types),
+        yaxis_title=str(ICE_target))
+    return fig
 
 #Amenity pages
 @app.callback(
     Output('amenity-histogram', 'figure'),
     [Input('amenity_dist', 'value')])
 def update_amenity_hist(value):
-    return px.histogram(df_ud, x="price",
-                   title=str('Percent Distribution of ' + value),
+    return px.histogram(df_ud, x="Nightly Price",
+                   title=str('Distribution of ' + value),
                    color= str(value),
                    #labels={'total_bill':'total bill'}, # can specify one label per df column
                    opacity=0.8,
@@ -99,13 +129,14 @@ def update_amenity_hist(value):
 @app.callback([
     Output('Rental_Income', 'children'),
     Output('income-table', 'children')],
-    [Input('amenity_checkbox', 'value')],
-    [Input('cancellation_policy', 'value')],
-    [Input('property_type', 'value')],
-    [Input('neighborhood', 'value')],
-    [Input('instant_book_enabled', 'value')],
-    [Input("{}".format(_), 'value') for _ in NUMERICAL_TYPES])
-def update_card_value(amenity_checkbox,cancellation_policy,property_type, neighborhood,instant_book_enabled, *vals):
+    [Input('submit-button', 'n_clicks')],
+    [State('amenity_checkbox', 'value')],
+    [State('cancellation_policy', 'value')],
+    [State('property_type', 'value')],
+    [State('neighborhood', 'value')],
+    [State('instant_book_enabled', 'value')],
+    [State("{}".format(_), 'value') for _ in NUMERICAL_TYPES])
+def update_card_value(n_clicks, amenity_checkbox,cancellation_policy,property_type, neighborhood,instant_book_enabled, *vals):
     pred = pd.DataFrame(np.zeros((1,len(df.columns.drop(["rental_income","occupancy"])))),columns=df.drop(["rental_income","occupancy"],axis=1).columns)
     ri=np.median(df.rental_income)
     print(vals)
@@ -145,21 +176,22 @@ def update_card_value(amenity_checkbox,cancellation_policy,property_type, neighb
     ri = stack.predict(pred)
     print(ri)
     #pred.iloc[0]=stack.named_steps['imputer'].transform(pred)
-    #for i in range(len(NUMERICAL_TYPES)):
-    #    print(str(NUMERICAL_TYPES[i]) + " " + str(vals[i]))
+    for i in range(len(NUMERICAL_TYPES)):
+        print(str(NUMERICAL_TYPES[i]) + " " + str(vals[i]))
     #fig=eli5.explain_prediction(stack.named_steps['R'], pred.iloc[-1], top=20, feature_names = feature_names)
-    exp=format_as_dataframe(explain_prediction(stack.named_steps['R'], pred.iloc[0], top=20, feature_names = feature_names))
-    print(exp)
+    exp=format_as_dataframe(explain_prediction(stack.named_steps['R'], pred.iloc[0], top=30, feature_names = feature_names))
+    exp=exp[exp.feature.isin(Amenity_Names)]
+    #print(exp)
     exp = dash_table.DataTable(
          id='ri-table',
          columns=[{"name": i, "id": i} 
-                  for i in exp.drop(['target', 'value'],axis=1).columns],
+                  for i in exp.drop(['target'],axis=1).columns],
          data=exp.to_dict('records'),
          style_cell=dict(textAlign='left'),
          style_header=dict(backgroundColor="paleturquoise"),
          style_data=dict(backgroundColor="lavender")
     )
-    print(exp)
+    #print(exp)
     return ri, exp
 
 
@@ -167,13 +199,14 @@ def update_card_value(amenity_checkbox,cancellation_policy,property_type, neighb
 @app.callback([
     Output('Occupancy', 'children'),
     Output('occupancy-table', 'children')],
-    [Input('amenity_checkbox', 'value')],
-    [Input('cancellation_policy', 'value')],
-    [Input('property_type', 'value')],
-    [Input('neighborhood', 'value')],
-    [Input('instant_book_enabled', 'value')],
-    [Input("{}".format(_), 'value') for _ in NUMERICAL_TYPES])
-def update_card_value(amenity_checkbox,cancellation_policy,property_type, neighborhood,instant_book_enabled, *vals):
+    [Input('submit-button', 'n_clicks')],
+    [State('amenity_checkbox', 'value')],
+    [State('cancellation_policy', 'value')],
+    [State('property_type', 'value')],
+    [State('neighborhood', 'value')],
+    [State('instant_book_enabled', 'value')],
+    [State("{}".format(_), 'value') for _ in NUMERICAL_TYPES])
+def update_card_value(n_clicks,amenity_checkbox,cancellation_policy,property_type, neighborhood,instant_book_enabled, *vals):
     pred = pd.DataFrame(np.zeros((1,len(df.columns.drop(["rental_income","occupancy"])))),columns=df.drop(["rental_income","occupancy"],axis=1).columns)
     oc=np.median(df.occupancy)
     print(vals)
@@ -216,12 +249,13 @@ def update_card_value(amenity_checkbox,cancellation_policy,property_type, neighb
     #for i in range(len(NUMERICAL_TYPES)):
     #    print(str(NUMERICAL_TYPES[i]) + " " + str(vals[i]))
     #fig=eli5.explain_prediction(stack.named_steps['R'], pred.iloc[-1], top=20, feature_names = feature_names)
-    exp=format_as_dataframe(explain_prediction(stackO.named_steps['R'], pred.iloc[0], top=20, feature_names = feature_names))
+    exp=format_as_dataframe(explain_prediction(stackO.named_steps['R'], pred.iloc[0], top=30, feature_names = feature_names))
+    exp=exp[exp.feature.isin(Amenity_Names)]
     print(exp)
     exp = dash_table.DataTable(
          id='oc-table',
          columns=[{"name": i, "id": i} 
-                  for i in exp.drop(['target', 'value'],axis=1).columns],
+                  for i in exp.drop(['target'],axis=1).columns],
          data=exp.to_dict('records'),
          style_cell=dict(textAlign='left'),
          style_header=dict(backgroundColor="paleturquoise"),

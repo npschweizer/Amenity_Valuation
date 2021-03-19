@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import pickle
 from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.impute import KNNImputer
+from sklearn.preprocessing import StandardScaler
 
 class Models:
 
@@ -97,7 +98,7 @@ class Models:
                plt.legend(loc=4)
                plt.savefig('Output/'+str(i)+' - '+self.name+' '+name+' MAE.png')
                plt.clf()
-#Pipeline(steps=[('imputer', imputer = KNNImputer()), ('model', self.model)])
+
 
     def assembleModels(self):
            models = {
@@ -131,17 +132,21 @@ class Models:
                            "GradientBoostingRegressor__max_depth": range(1, 15, 4),
                            'GradientBoostingRegressor__loss': ['ls']}), # use feature_importances for feature selection
 
-            #'SVM': Models(SVR(), 'Support Vector Regressor',
-            #           {'C': np.linspace(1, 10, 3),
-            #            'gamma': ['scale','auto'],
-            #            'kernel': ['linear']})
+           # 'SVR': Models(
+           #                 Pipeline(steps=[('s', StandardScaler()),('imputer', KNNImputer()), ('SVR', SVR())]),
+           #                 'SVR',
+           #                 {'SVR__kernel': ['linear','poly', 'rbf'],
+           #                 'SVR__degree': [1,2,3],
+           #                 "SVR__gamma":['scale', 'auto'],
+           #                 "SVR__coef0": range(1, 100, 20),
+           #                 'SVR__C': range(1, 100, 10), 
+           #                 'SVR__epsilon': [0, 0.01, 0.1, 0.5, 1, 2, 4]})
+                           
             #Regression((), ''),
             #Regression((), ''),
            }
 
-           # pipelines = {}
-           # for i in models:
-           #    pipelines[str(i)] = Pipeline(steps=[('imputer', imputer = KNNImputer()), ('model', self.model)])
+
            return models
 
     def getExecutionTime(self, fun: Callable):
@@ -192,7 +197,7 @@ class Models:
            models['ElasticNet'].time,    returnValue = self.getExecutionTime(lambda: models['ElasticNet'].fitCV(*trainTestData))
            models['RandomForestRegressor'].time,  returnValue = self.getExecutionTime(lambda: models['RandomForestRegressor'].fitCV(*trainTestData))
            models['GradientBoostingRegressor'].time, returnValue = self.getExecutionTime(lambda: models['GradientBoostingRegressor'].fitCV(*trainTestData))
-           #models['SVM'].time,            returnValue = self.getExecutionTime(lambda: models['SVM'].fitCV(*trainTestData))
+           #models['SVR'].time,            returnValue = self.getExecutionTime(lambda: models['SVR'].fitCV(*trainTestData))
 
            results = pd.DataFrame([r.__dict__ for r in models.values()]).drop(columns=['model', 'modelCV'] )
 
@@ -210,8 +215,6 @@ class Models:
                 prediction = pd.Series(regression.model.predict(x))
                 predictions = pd.concat([predictions, prediction], axis = 1)
 
-        #Outcome  = predictions.apply(np.exp, axis=1)
-        #finalPrediction = salePrice.apply(np.mean, axis=1)
 
            output = pd.DataFrame({'Id': test['Id'].astype(int), self.target: predictions})
            output.to_csv('Submission.csv', index=False)
