@@ -1,9 +1,9 @@
 ---
 title: "Overview"
 output:
+  html_document: default
   word_document: default
   pdf_document: default
-  html_document: default
 ---
 
 As most new AirBnb landlords will tell you, there's a lot of stuff you can buy to try to spruce up your property and almost as many [YouTube personalities](https://www.youtube.com/watch?v=WwsMIChMDfE), [news articles](https://qz.com/810309/you-can-earn-10-more-per-night-on-airbnb-just-by-having-a-hair-dryer/) and [blogs](https://optimizemybnb.com/improve-airbnb-amenities/) telling you to do the same. Even AirBnb has released [analysis](https://www.airbnb.com/resources/hosting-homes/a/the-best-amenities-to-offer-right-now-203) (although no data) to try to help guide landlords trying to decide how or whether to improve their listings.
