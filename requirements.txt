@@ -10,7 +10,7 @@ jupyterlab
 dash_table
 pandas
 numpy
-pickle
+pickle5
 eli5
 sklearn
 mlxtend
