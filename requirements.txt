@@ -1,0 +1,17 @@
+plotly
+dash
+dash-renderer
+dash-html-components
+dash-core-components
+pandas
+dash_bootstrap_components
+statsmodels
+jupyterlab
+dash_table
+pandas
+numpy
+pickle
+eli5
+sklearn
+mlxtend
+itertools
