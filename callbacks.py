@@ -20,8 +20,6 @@ from eli5.formatters.as_dataframe import format_as_dataframe
 from sklearn.inspection import plot_partial_dependence
 from mlxtend.regressor import StackingCVRegressor
 from sklearn.inspection import partial_dependence
-from itertools import compress 
-from itertools import repeat
 pd.set_option('display.max_columns', None)
 df = pd.read_pickle("Data/model_data.data")
 df_amenity = pd.read_pickle("Data/amenity.data")
