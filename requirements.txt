@@ -14,4 +14,3 @@ pickle5
 eli5
 sklearn
 mlxtend
-itertools
