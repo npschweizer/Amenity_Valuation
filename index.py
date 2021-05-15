@@ -14,6 +14,12 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import callbacks
 
+#added to make heroku/gunicorn happy per https://community.plotly.com/t/deploy-dash-to-heroku-error-failed-to-parse-app-server-as-an-attribute-name-or-function-call/47909/6
+#see also https://community.plotly.com/t/deploying-your-dash-app-to-heroku-the-magical-guide/46723
+from app import app, server
+
+server = app.server
+
 # Define the layout of the index page, each layout is defined in the layouts file
 app.layout = html.Div([dcc.Location(id="url"), sidebar_layout, 
                         html.Div(id="page-content", style=CONTENT_STYLE)])
