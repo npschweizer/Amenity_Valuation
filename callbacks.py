@@ -26,7 +26,7 @@ df_amenity = pd.read_pickle("Data/amenity.data")
 pd.options.display.max_seq_items = None
 print('w')
 stack= pickle.load(open('finalized_model_ri.sav', 'rb'))
-stackO= pickle.load(open('finalized_model_o.sav', 'rb'))
+stackO= pickle.load(open('finalized_model_O.sav', 'rb'))
 df_ud = pd.read_csv("Data/l2_detailed_listings.csv", encoding = "UTF-8")
 CARD_KEYS = ['Rental Income', 'Occupancy']
 Amenity_Names = df_amenity.columns.tolist()
