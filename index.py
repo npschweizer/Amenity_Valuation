@@ -5,7 +5,7 @@ We define the layouts and callbacks for each page in different files
 """
 from dash import Dash
 from dash.dependencies import Input, Output
-from layouts import homepage_layout, predictor_layout,amenities_layout, sidebar_layout, CONTENT_STYLE
+from layouts import homepage_layout, predictor_layout,amenities_layout, sidebar_layout, terms_layout, CONTENT_STYLE
 from os import path
 from app import app
 import dash_core_components as dcc
@@ -34,6 +34,8 @@ def render_page_content(pathname):
         return amenities_layout
     elif pathname == "/predictor":
         return predictor_layout
+    elif pathname == "/terms":
+        return terms_layout
     # If the user tries to reach a different page, return a 404 message
     return dbc.Jumbotron(
         [
@@ -47,7 +49,8 @@ def render_page_content(pathname):
 PAGES = [
     {'children': 'Home', 'href': '/', 'id': 'home'},
     {'children': 'Amenities', 'href': '/amenities', 'id': 'amenities'},
-    {'children': 'Predictor', 'href': '/predictor', 'id': 'predictor'}
+    {'children': 'Predictor', 'href': '/predictor', 'id': 'predictor'},
+    {'children': 'Terms', 'href': '/terms', 'id': 'terms'}
 ]
 
 # this callback uses the current pathname to set the active state of the
