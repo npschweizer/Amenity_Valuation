@@ -5,7 +5,7 @@ We define the layouts and callbacks for each page in different files
 """
 from dash import Dash
 from dash.dependencies import Input, Output
-from layouts import homepage_layout, predictor_layout,amenities_layout, sidebar_layout, terms_layout, CONTENT_STYLE
+from layouts import homepage_layout, predictor_layout, amenities_layout, sidebar_layout, terms_layout, CONTENT_STYLE
 from os import path
 from app import app
 import dash_core_components as dcc
