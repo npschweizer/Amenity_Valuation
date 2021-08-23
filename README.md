@@ -2,6 +2,7 @@
 
 Check out the dashboard [here](https://amenityshmenity.herokuapp.com/)
 
+<embed>
 <div id="adobe-dc-view"></div>
 <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
 <script type="text/javascript">
@@ -13,3 +14,4 @@ Check out the dashboard [here](https://amenityshmenity.herokuapp.com/)
 		}, {});
 	});
 </script>
+	</embed>
