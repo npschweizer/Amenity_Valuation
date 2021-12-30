@@ -28,7 +28,7 @@ print('w')
 stack= pickle.load(open('finalized_model_ri.sav', 'rb'))
 stackO= pickle.load(open('finalized_model_O.sav', 'rb'))
 df_ud = pd.read_csv("Data/l2_detailed_listings.csv", encoding = "UTF-8")
-df_words pd.read_csv(r"Data/l1_detailed_listings.csv", encoding = "UTF-8")
+df_words= pd.read_csv(r"Data/l1_detailed_listings.csv", encoding = "UTF-8")
 df_words=df_words.drop("status", axis=1)
 CARD_KEYS = ['Rental Income', 'Occupancy']
 Amenity_Names = df_amenity.columns.tolist()
