@@ -21,13 +21,15 @@ from sklearn.inspection import plot_partial_dependence
 from mlxtend.regressor import StackingCVRegressor
 from sklearn.inspection import partial_dependence
 pd.set_option('display.max_columns', None)
-df = pd.read_pickle("Data/model_data.data")
+df = pd.read_pickle("http://s3.amazonaws.com/amenityshmenity1/model_data.data")
 df_amenity = pd.read_pickle("Data/amenity.data")
 pd.options.display.max_seq_items = None
 print('w')
 stack= pickle.load(open('finalized_model_ri.sav', 'rb'))
 stackO= pickle.load(open('finalized_model_O.sav', 'rb'))
 df_ud = pd.read_csv("Data/l2_detailed_listings.csv", encoding = "UTF-8")
+df_words pd.read_csv(r"Data/l1_detailed_listings.csv", encoding = "UTF-8")
+df_words=df_words.drop("status", axis=1)
 CARD_KEYS = ['Rental Income', 'Occupancy']
 Amenity_Names = df_amenity.columns.tolist()
 NUMERICAL_TYPES = df_ud.columns.tolist()
