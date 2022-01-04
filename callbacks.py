@@ -14,14 +14,7 @@ import dash_table
 import pandas as pd
 import numpy as np
 import pickle
-import base64
-import hashlib
-import hmac
-import logging
 import os
-import time
-import urllib
-from hashlib import sha1
 from eli5 import explain_prediction
 from eli5.formatters.html import format_as_html
 from eli5.formatters.as_dataframe import format_as_dataframe
@@ -77,13 +70,13 @@ def sign_s3(request):
     })
 
 pd.set_option('display.max_columns', None)
-df = pd.read_pickle(download_file('model_data.data'))
-df_amenity = pd.read_pickle("Data/amenity.data")
+df = pd.read_pickle(download_file(f'model_data.data'))
+df_amenity = pd.read_pickle(download_file(f"amenity.data"))
 pd.options.display.max_seq_items = None
-stack= pickle.load(open('finalized_model_ri.sav', 'rb'))
-stackO= pickle.load(open('finalized_model_O.sav', 'rb'))
-df_ud = pd.read_csv("Data/l2_detailed_listings.csv", encoding = "UTF-8")
-df_words= pd.read_csv(r"Data/l1_detailed_listings.csv", encoding = "UTF-8")
+stack= pickle.load(open(download_file(f'finalized_model_ri.sav'), 'rb'))
+stackO= pickle.load(open(download_file(f'finalized_model_O.sav'), 'rb'))
+df_ud = pd.read_csv(download_file(f"l2_detailed_listings.csv"), encoding = "UTF-8")
+df_words= pd.read_csv(download_file(f"l1_detailed_listings.csv"), encoding = "UTF-8")
 df_words=df_words.drop("status", axis=1)
 CARD_KEYS = ['Rental Income', 'Occupancy']
 Amenity_Names = df_amenity.columns.tolist()
