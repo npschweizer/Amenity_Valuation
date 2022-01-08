@@ -103,7 +103,31 @@ amenities_layout = html.Div(
                         dbc.Col(
                             dcc.Graph(id="amenity-histogram"),
                             )]
-                        )
+                        ),
+                    dbc.Row(
+                        [
+                            dbc.Card(dbc.CardBody(
+                            [
+                            html.H3(str("Amenity-Specific")),
+                            dcc.Markdown([
+                                "These are terms from the amenity you selected above",
+                            ]),
+                            #html.H4(id='Rental_Income'),
+                            html.Img(id='image'),
+                            ]
+                        )),
+                        dbc.Card(dbc.CardBody(
+                            [
+                            html.H3("All Listings"),
+                            dcc.Markdown([
+                                "These are terms from all listings in the dataset",
+                            ]),
+                            #html.H4(id='Occupancy'),
+                            html.Img(id='no_image'),
+                            ]
+                        )),
+                    ],
+                    )
                 ]
 )
 

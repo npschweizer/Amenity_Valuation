@@ -173,6 +173,14 @@ def update_amenity_hist(value):
                    )
 
 
+@app.callback(
+    Output('image', 'src'),
+    Output('no_image', 'src'),
+    [Input('amenity_dist', 'value')])
+def update_image_src(value):
+    print('/static/' + value + '.png')
+    return download_file('/static/' + value + '.png'), download_file('/static/main.png')
+
 #Occupancy and Rental_Income Outputs
 @app.callback([
     Output('Rental_Income', 'children'),
