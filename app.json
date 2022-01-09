@@ -1,0 +1,12 @@
+{
+  "name": "amenity-shmenity",
+  "description": "App for predicting AirBnb rental income.",
+  "keywords": [
+    "AirBnb",
+    "Real Estate",
+    "Investing"
+  ],
+  "website": "https://amenityshmenity.herokuapp.com/amenities",
+  "repository": "https://github.com/npschweizer/Amenity_Valuation",
+  "logo": "",
+}
