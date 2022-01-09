@@ -28,7 +28,7 @@ AWS_ACCESS_KEY = os.environ.get('AWS_ACCESS_KEY')
 AWS_SECRET_KEY = os.environ.get('AWS_SECRET_KEY')
 S3_BUCKET = os.environ.get('S3_BUCKET')
 
-def download_file(file_name, path):
+def download_file(file_name, output):
     """
     Function to download a given file from an S3 bucket
     """
@@ -36,7 +36,6 @@ def download_file(file_name, path):
                         aws_access_key_id=AWS_ACCESS_KEY,
                         aws_secret_access_key=AWS_SECRET_KEY
                         )
-    output = str(path + file_name)
     print('Output is ' + output)
     print('File name is ' + file_name)
     s3.Bucket(S3_BUCKET).download_file(file_name, output)
@@ -45,13 +44,13 @@ def download_file(file_name, path):
 
 
 pd.set_option('display.max_columns', None)
-df = pd.read_pickle(download_file(f'model_data.data', ''))
-df_amenity = pd.read_pickle(download_file(f"amenity.data", ''))
+df = pd.read_pickle(download_file(f'model_data.data', 'model_data.data'))
+df_amenity = pd.read_pickle(download_file(f"amenity.data", 'amenity.data'))
 pd.options.display.max_seq_items = None
-stack= pickle.load(open(download_file(f'finalized_model_ri.sav', ''), 'rb'))
-stackO= pickle.load(open(download_file(f'finalized_model_O.sav', ''), 'rb'))
-df_ud = pd.read_csv(download_file(f"l2_detailed_listings.csv", ''), encoding = "UTF-8")
-df_words= pd.read_csv(download_file(f"l1_detailed_listings.csv", ''), encoding = "UTF-8")
+stack= pickle.load(open(download_file(f'finalized_model_ri.sav', 'finalized_model_ri.sav'), 'rb'))
+stackO= pickle.load(open(download_file(f'finalized_model_O.sav', 'finalized_model_O.sav'), 'rb'))
+df_ud = pd.read_csv(download_file(f"l2_detailed_listings.csv", 'l2_detailed_listings.csv'), encoding = "UTF-8")
+df_words= pd.read_csv(download_file(f"l1_detailed_listings.csv", 'l1_detailed_listings.csv'), encoding = "UTF-8")
 df_words=df_words.drop("status", axis=1)
 CARD_KEYS = ['Rental Income', 'Occupancy']
 Amenity_Names = df_amenity.columns.tolist()
@@ -153,8 +152,8 @@ def update_amenity_hist(value):
     [Input('amenity_dist', 'value')])
 def update_image_src(value):
     print('/static/' + value + '.png')
-    img=download_file(str('static/' + value + '.png'), str(''))
-    no_img=download_file(f'static/main.png', f'')
+    img=download_file(str('static/' + value + '.png'), str(value + '.png'))
+    no_img=download_file(f'static/main.png', f'main.png')
     return img,no_img 
 
 #Occupancy and Rental_Income Outputs
