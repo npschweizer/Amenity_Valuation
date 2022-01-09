@@ -28,55 +28,30 @@ AWS_ACCESS_KEY = os.environ.get('AWS_ACCESS_KEY')
 AWS_SECRET_KEY = os.environ.get('AWS_SECRET_KEY')
 S3_BUCKET = os.environ.get('S3_BUCKET')
 
-def download_file(file_name):
+def download_file(file_name, path):
     """
     Function to download a given file from an S3 bucket
     """
     s3 = boto3.resource('s3',
                         aws_access_key_id=AWS_ACCESS_KEY,
-                        aws_secret_access_key=AWS_SECRET_KEY)
-    output = f"{file_name}"
+                        aws_secret_access_key=AWS_SECRET_KEY
+                        )
+    output = str(path + file_name)
+    print('Output is ' + output)
+    print('File name is ' + file_name)
     s3.Bucket(S3_BUCKET).download_file(file_name, output)
 
     return output
 
 
-def sign_s3(request):
-    """
-    https://devcenter.heroku.com/articles/s3-upload-python
-    """
-
-
-    object_name = urllib.quote_plus(request.GET['file_name'])
-    mime_type = request.GET['file_type']
-
-    secondsPerDay = 24*60*60
-    expires = int(time.time()+secondsPerDay)
-    amz_headers = "x-amz-acl:public-read"
-
-    string_to_sign = "GET\n\n%s\n%d\n%s\n/%s/%s" % (mime_type, expires, amz_headers, S3_BUCKET, object_name)
-
-    encodedSecretKey = AWS_SECRET_KEY.encode()
-    encodedString = string_to_sign.encode()
-    h = hmac.new(encodedSecretKey, encodedString, sha1)
-    hDigest = h.digest()
-    signature = base64.encodebytes(hDigest).strip()
-    signature = urllib.parse.quote_plus(signature)
-    url = 'https://%s.s3.amazonaws.com/%s' % (S3_BUCKET, object_name)
-
-    return JsonResponse({
-        'signed_request': '%s?AWSAccessKeyId=%s&Expires=%s&Signature=%s' % (url, AWS_ACCESS_KEY, expires, signature),
-        'url': url,
-    })
-
 pd.set_option('display.max_columns', None)
-df = pd.read_pickle(download_file(f'model_data.data'))
-df_amenity = pd.read_pickle(download_file(f"amenity.data"))
+df = pd.read_pickle(download_file(f'model_data.data', ''))
+df_amenity = pd.read_pickle(download_file(f"amenity.data", ''))
 pd.options.display.max_seq_items = None
-stack= pickle.load(open(download_file(f'finalized_model_ri.sav'), 'rb'))
-stackO= pickle.load(open(download_file(f'finalized_model_O.sav'), 'rb'))
-df_ud = pd.read_csv(download_file(f"l2_detailed_listings.csv"), encoding = "UTF-8")
-df_words= pd.read_csv(download_file(f"l1_detailed_listings.csv"), encoding = "UTF-8")
+stack= pickle.load(open(download_file(f'finalized_model_ri.sav', ''), 'rb'))
+stackO= pickle.load(open(download_file(f'finalized_model_O.sav', ''), 'rb'))
+df_ud = pd.read_csv(download_file(f"l2_detailed_listings.csv", ''), encoding = "UTF-8")
+df_words= pd.read_csv(download_file(f"l1_detailed_listings.csv", ''), encoding = "UTF-8")
 df_words=df_words.drop("status", axis=1)
 CARD_KEYS = ['Rental Income', 'Occupancy']
 Amenity_Names = df_amenity.columns.tolist()
@@ -172,6 +147,15 @@ def update_amenity_hist(value):
                    color_discrete_sequence=px.colors.qualitative.Bold # color of histogram bars
                    )
 
+@app.callback(
+    Output('image', 'src'),
+    Output('no_image', 'src'),
+    [Input('amenity_dist', 'value')])
+def update_image_src(value):
+    print('/static/' + value + '.png')
+    img=download_file(str('static/' + value + '.png'), str(''))
+    no_img=download_file(f'static/main.png', f'')
+    return img,no_img 
 
 #Occupancy and Rental_Income Outputs
 @app.callback([
