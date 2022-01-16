@@ -151,8 +151,10 @@ def update_amenity_hist(value):
     Output('no_image', 'src'),
     [Input('amenity_dist', 'value')])
 def update_image_src(value):
-    print('/static/' + value + '.png')
-    img=download_file(str('static/' + value + '.png'), str(value + '.png'))
+    am_image_value=value
+    am_image_value=am_image_value.replace(' ','+')
+    print('/static/' + am_image_value+ '.png')
+    img=download_file(str('static/' + am_image_value + '.png'), str(value + '.png'))
     no_img=download_file(f'static/main.png', f'main.png')
     return img,no_img 
 
