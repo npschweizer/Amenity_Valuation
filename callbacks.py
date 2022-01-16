@@ -38,7 +38,13 @@ def download_file(file_name, output):
                         )
     print('Output is ' + output)
     print('File name is ' + file_name)
-    s3.Bucket(S3_BUCKET).download_file(file_name, output)
+    try:
+        s3.Bucket(S3_BUCKET).download_file(file_name, output)
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == "404":
+            print("The object does not exist.")
+        else:
+            raise
 
     return output
 
