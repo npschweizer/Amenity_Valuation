@@ -161,9 +161,9 @@ def update_image_src(value):
     am_image_value=value
     am_image_value=am_image_value.replace(' ','+')
     print('/static/' + am_image_value+ '.png')
-    img=download_file(str('static/' + am_image_value + '.png'), str(value + '.png'))
-    no_img=download_file(f'static/main.png', f'main.png')
-    return img,no_img 
+    img=download_file(str('static/' + am_image_value + '.png'), str('static/' + am_image_value + '.png'))
+    no_img=download_file(f'static/main.png', f'static/main.png')
+    return 'static/' + am_image_value + '.png', 'static/main.png'
 
 #Occupancy and Rental_Income Outputs
 @app.callback([
