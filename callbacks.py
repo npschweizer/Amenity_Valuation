@@ -22,6 +22,7 @@ from sklearn.inspection import plot_partial_dependence
 from mlxtend.regressor import StackingCVRegressor
 from sklearn.inspection import partial_dependence
 import boto3
+import botocore
 
 
 AWS_ACCESS_KEY = os.environ.get('AWS_ACCESS_KEY')
