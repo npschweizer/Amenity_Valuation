@@ -164,6 +164,14 @@ def update_image_src(value):
     no_img=download_file(f'static/main.png', f'static/main.png')
     return 'static/' + am_image_value + '.png', 'static/main.png'
 
+@app.callback(
+    Output('image', 'src'),
+    Output('no_image', 'src'),
+    [Input('amenity_dist', 'value')])
+def update_image_src(value):
+    print('/static/' + value + '.png')
+    return download_file('/static/' + value + '.png'), download_file('/static/main.png')
+
 #Occupancy and Rental_Income Outputs
 @app.callback([
     Output('Rental_Income', 'children'),
